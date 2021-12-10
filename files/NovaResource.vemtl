@@ -1,0 +1,174 @@
+<?php
+<# TEMPLATE VARIABLES #>
+<% let crudModelName = this.crud.model.name %>
+<% let modelsNamespace = this.projectHelper.getModelsNamespace() %>
+<####>
+
+namespace App\Nova;
+
+use Illuminate\Http\Request;
+use Laravel\Nova\Http\Requests\NovaRequest;
+<% if(this.crud.hasTextInputs() || this.crud.hasEmailInputs() || this.crud.hasUrlInputs()) { %>
+use Laravel\Nova\Fields\Text;
+<% } %>
+<% if(this.crud.hasSelectInputs()) { %>
+use Laravel\Nova\Fields\Select;
+<% } %>
+<% if(this.crud.hasImageInputs()) { %>
+use Laravel\Nova\Fields\Image;
+<% } %>
+<% if(this.crud.hasFileInputs()) { %>
+use Laravel\Nova\Fields\File;
+<% } %>
+<% if(this.crud.hasNumericInputs()) { %>
+use Laravel\Nova\Fields\Number;
+<% } %>
+<% if(this.crud.hasTextareaInputs()) { %>
+use Laravel\Nova\Fields\Textarea;
+<% } %>
+<% if(this.crud.hasDateInputs()) { %>
+use Laravel\Nova\Fields\Date;
+<% } %>
+<% if(this.crud.hasDatetimeInputs()) { %>
+use Laravel\Nova\Fields\Datetime;
+<% } %>
+<% if(this.crud.hasPasswordInputs()) { %>
+use Laravel\Nova\Fields\Password;
+<% } %>
+<% if(this.crud.hasHiddenInputs()) { %>
+use Laravel\Nova\Fields\Hidden;
+<% } %>
+<% if(this.crud.hasCheckboxInputs()) { %>
+use Laravel\Nova\Fields\Boolean;
+<% } %>
+<% if(this.crud.hasBelongsToInputs()) { %>
+use Laravel\Nova\Fields\BelongsTo;
+<% } %>
+
+class <$ crudModelName $> extends Resource
+{
+    /**
+     * The model the resource corresponds to.
+     *
+     * @var string
+     */
+    public static $model = \<$ modelsNamespace $>\<$ crudModelName $>::class;
+
+    /**
+     * The single value that should be used to represent the resource when being displayed.
+     *
+     * @var string
+     */
+    public static $title = '<$ this.crud.model.getLabelFieldName() $>';
+
+    /**
+     * The columns that should be searched.
+     *
+     * @var array
+     */
+    public static $search = [
+        '<$ this.crud.model.getLabelFieldName() $>',
+    ];
+
+    /**
+     * Get the fields displayed by the resource.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    public function fields(Request $request)
+    {
+        return [
+            <% if(this.crud.hasTextInputs() || this.crud.hasEmailInputs() || this.crud.hasUrlInputs()) { %>
+                <# Crud inputs #>
+                <% for(let input of this.crud.inputs) { %>
+                    <% let inputName = input.isForRelationship() ? input.relationship.model.name : input.name %>
+                    <###>
+                    <$ input.getTypeForNova() $>::make('<$ inputName $>')
+                        <% if(input.hasValidation() || input.hasUpdateValidation()) { %>
+                            <###>
+                            <% if(!input.hasDifferentUpdateValidation()) { %>
+                                ->rules(<$ input.getValidationForNovaTemplate() $>)
+                            <% } else { %>
+                                ->creationRules(<$ input.getValidationForNovaTemplate() $>)
+                                ->updateRules(<$ input.getUpdateValidationForNovaTemplate() $>)
+                            <% } %>
+                        <% } %>
+                        <###>
+                        <% if(input.readOnly) { %>
+                        ->readonly(optional($this->resource)->trashed())
+                        <% } %>
+                        <###>
+                        <% if(input.placeholder) { %>
+                        ->placeholder('<$ input.placeholder $>')
+                        <% } %>
+                        <###>
+                        <% if(input.defaultValue) { %>
+                        ->default('<$ input.defaultValue $>')
+                        <% } %>
+                        <###>
+                        <% if(!input.onIndex) { %>
+                        ->hideFromIndex()
+                        <% } %>
+                        <###>
+                        <% if(!input.onShow) { %>
+                        ->hideFromDetail()
+                        <% } %>
+                        <###>
+                        <% if(!input.onCreate) { %>
+                        ->hideWhenCreating()
+                        <% } %>
+                        <###>
+                        <% if(!input.onUpdate) { %>
+                        ->hideWhenUpdating()
+                        <% } %>,
+
+                <% } %>
+            <% } %>
+        ];
+    }
+
+    /**
+     * Get the cards available for the request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    public function cards(Request $request)
+    {
+        return [];
+    }
+
+    /**
+     * Get the filters available for the resource.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    public function filters(Request $request)
+    {
+        return [];
+    }
+
+    /**
+     * Get the lenses available for the resource.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    public function lenses(Request $request)
+    {
+        return [];
+    }
+
+    /**
+     * Get the actions available for the resource.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    public function actions(Request $request)
+    {
+        return [];
+    }
+}

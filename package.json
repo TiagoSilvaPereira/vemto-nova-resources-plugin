@@ -1,0 +1,10 @@
+{
+    "version": "1.0.0",
+    "id": "app.vemto.laravel-nova",
+    "name": "laravel-nova",
+    "title": "Laravel Nova",
+    "description": "Laravel Nova Plugin",
+    "image": "",
+    "main": "src/main.js",
+    "vueComponent": ""
+}
