@@ -6,9 +6,10 @@
 
 namespace App\Nova;
 
+use Laravel\Nova\Fields\ID;
 use Illuminate\Http\Request;
 use Laravel\Nova\Http\Requests\NovaRequest;
-<% if(this.crud.hasTextInputs() || this.crud.hasEmailInputs() || this.crud.hasUrlInputs()) { %>
+<% if(this.crudHasTextInputs(this.crud)) { %>
 use Laravel\Nova\Fields\Text;
 <% } %>
 <% if(this.crud.hasSelectInputs()) { %>
@@ -41,8 +42,9 @@ use Laravel\Nova\Fields\Hidden;
 <% if(this.crud.hasCheckboxInputs()) { %>
 use Laravel\Nova\Fields\Boolean;
 <% } %>
-<% if(this.crud.hasBelongsToInputs()) { %>
-use Laravel\Nova\Fields\BelongsTo;
+<###>
+<% for(let relationship of this.getAllRelationshipsFromModel(this.crud.model)) { %>
+    use Laravel\Nova\Fields\<$ relationship.type.case('pascalCase') $>;
 <% } %>
 
 class <$ crudModelName $> extends Resource
@@ -79,20 +81,32 @@ class <$ crudModelName $> extends Resource
     public function fields(Request $request)
     {
         return [
-            <% if(this.crud.hasTextInputs() || this.crud.hasEmailInputs() || this.crud.hasUrlInputs()) { %>
+            ID::make('id')->sortable(),
+
+            <% if(this.crud.inputs.length) { %>
                 <# Crud inputs #>
-                <% for(let input of this.crud.inputs) { %>
-                    <% let inputName = input.isForRelationship() ? input.relationship.model.name : input.name %>
+                <% for(let input of this.getInputsForNova(this.crud)) { %>
+                    <% let inputName = input.isForRelationship() ? input.relationship.model.name : input.name.case('pascalCase') %>
                     <###>
-                    <$ input.getTypeForNova() $>::make('<$ inputName $>')
+                    <$ this.getTypeForNova(input) $>::make('<$ inputName $>')
                         <% if(input.hasValidation() || input.hasUpdateValidation()) { %>
                             <###>
                             <% if(!input.hasDifferentUpdateValidation()) { %>
-                                ->rules(<$ input.getValidationForNovaTemplate() $>)
+                                ->rules(<$ this.getValidationForNova(input) $>)
                             <% } else { %>
-                                ->creationRules(<$ input.getValidationForNovaTemplate() $>)
-                                ->updateRules(<$ input.getUpdateValidationForNovaTemplate() $>)
+                                ->creationRules(<$ this.getValidationForNova(input) $>)
+                                ->updateRules(<$ this.getUpdateValidationForNova(input) $>)
                             <% } %>
+                        <% } %>
+                        <###>
+                        <% if(input.isSelect() && !input.isForRelationship()) { %>
+                        ->searchable()
+                        ->options([
+                            <% for(let item of input.items) { %>
+                                '<$ item.value $>' => '<$ item.label $>',
+                            <% } %>
+                        ])
+                        ->displayUsingLabels()
                         <% } %>
                         <###>
                         <% if(input.readOnly) { %>
@@ -124,6 +138,16 @@ class <$ crudModelName $> extends Resource
                         <% } %>,
 
                 <% } %>
+            <% } %>
+
+            <% for(let relationship of this.getAllRelationshipsFromModel(this.crud.model)) { %>
+                <% let relInput = relationship.inputs ? relationship.inputs[0] : null %>
+                <$ relationship.type.case('pascalCase') $>::make('<$ this.getRelationshipModelName(relationship) $>')
+                <###>
+                <% if(relInput && relInput.field.nullable) { %>
+                    ->nullable()
+                <% } %>,
+                
             <% } %>
         ];
     }
