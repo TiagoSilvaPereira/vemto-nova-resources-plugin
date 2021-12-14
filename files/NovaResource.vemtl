@@ -86,7 +86,9 @@ class <$ crudModelName $> extends Resource
             <% if(this.crud.inputs.length) { %>
                 <# Crud inputs #>
                 <% for(let input of this.getInputsForNova(this.crud)) { %>
+                    <###>
                     <% let inputName = input.isForRelationship() ? input.relationship.model.name : input.name.case('pascalCase') %>
+                    <% let inputNeedsOptions = input.isSelect() && !input.isForRelationship() %>
                     <###>
                     <$ this.getTypeForNova(input) $>::make('<$ inputName $>')
                         <% if(input.hasValidation() || input.hasUpdateValidation()) { %>
@@ -99,7 +101,7 @@ class <$ crudModelName $> extends Resource
                             <% } %>
                         <% } %>
                         <###>
-                        <% if(input.isSelect() && !input.isForRelationship()) { %>
+                        <% if(inputNeedsOptions) { %>
                         ->searchable()
                         ->options([
                             <% for(let item of input.items) { %>
@@ -142,6 +144,7 @@ class <$ crudModelName $> extends Resource
 
             <% for(let relationship of this.getAllRelationshipsFromModel(this.crud.model)) { %>
                 <% let relInput = relationship.inputs ? relationship.inputs[0] : null %>
+                <###>
                 <$ relationship.type.case('pascalCase') $>::make('<$ this.getRelationshipModelName(relationship) $>')
                 <###>
                 <% if(relInput && relInput.field.nullable) { %>

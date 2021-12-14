@@ -3,32 +3,59 @@ module.exports = (vemto) => {
     return {
 
         crudsAllowedForNova() {
-            return vemto.project.getMainCruds()
+            let pluginData = vemto.getPluginData()
+
+            if(!pluginData.cruds.length) {
+                vemto.log.error('Select a CRUD on the plugin page for generating a Nova Resource')
+                return []
+            }
+
+            return pluginData.cruds
+        },
+
+        onInstall() {
+            vemto.savePluginData({
+                cruds: {},
+                inputs: {},
+                relationships: {}
+            })
         },
 
         beforeCodeGenerationEnd() {
-            this.generateNovaFiles()
+            let selectedCruds = this.crudsAllowedForNova()
+
+            if(!selectedCruds.length) return
+
+            selectedCruds = Object.keys(selectedCruds).filter(crud => selectedCruds[crud])
+
+            this.generateNovaFiles(selectedCruds)
         },
 
-        generateNovaFiles() {
+        generateNovaFiles(selectedCruds) {
             let basePath = 'app/Nova',
                 options = {
                     formatAs: 'php',
                     data: {}
                 }
-
+                
             vemto.log.message('Generating Nova Resources...')
 
-            this.crudsAllowedForNova().forEach(crud => {
+            let projectCruds = vemto.getProject().getMainCruds()
+
+                selectedCruds.forEach(crudId => {
+                let crud = projectCruds.find(crud => crud.id == crudId)
+
+                if(!crud) return
+
                 options.data = {
                     crud,
                     getTypeForNova: this.getTypeForNova,
                     getInputsForNova: this.getInputsForNova,
                     crudHasTextInputs: this.crudHasTextInputs,
                     getValidationForNova: this.getValidationForNova,
+                    getRelationshipModelName: this.getRelationshipModelName,
                     getUpdateValidationForNova: this.getUpdateValidationForNova,
                     getAllRelationshipsFromModel: this.getAllRelationshipsFromModel,
-                    getRelationshipModelName: this.getRelationshipModelName
                 }
 
                 vemto.renderTemplate('files/NovaResource.vemtl', `${basePath}/${crud.model.name}.php`, options)
@@ -94,7 +121,7 @@ module.exports = (vemto) => {
             }
 
             return relationship.model.name
-        },
+        }
 
     }
 
