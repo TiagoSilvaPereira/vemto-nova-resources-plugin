@@ -139,7 +139,13 @@ module.exports = (vemto) => {
             }
 
             return relationship.model.name
-        }
+        },
+
+        beforeRunnerStart() {
+            let projectSettings = vemto.getProject()
+        
+            vemto.openLink(`${projectSettings.url}/nova`)
+        },
 
     }
 
