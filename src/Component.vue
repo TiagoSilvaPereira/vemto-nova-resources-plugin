@@ -9,29 +9,29 @@
             <div class="form-check mb-3">
                 <label class="inline-flex items-center" for="selectAllCruds">
                     <input class="form-checkbox" type="checkbox" id="selectAllCruds" @change="selectAllData">
-                    <span class="ml-2 text-gray-800">Select All</span>
+                    <span class="ml-2 text-gray-800 dark:text-gray-300">Select All</span>
                 </label>
             </div>
             
             <template v-if="!! pluginData.cruds">
-                <div class="bg-gray-100 border border-gray-300 p-2 rounded-md my-3" v-for="crud in projectCruds" :key="'crud' + crud.id">
+                <div class="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-900 p-2 rounded-md my-3" v-for="crud in projectCruds" :key="'crud' + crud.id">
                     <div class="form-check">
                         <label class="inline-flex items-center text-gray-800" :for="crud.id">
                             <input class="form-checkbox" type="checkbox" v-model="pluginData.cruds[crud.id]['selected']" :id="crud.id" @change="toggleCrudData(crud)">
-                            <span class="ml-2 text-gray-800">{{ crud.name }}</span>
+                            <span class="ml-2 text-gray-800 dark:text-gray-100">{{ crud.name }}</span>
                         </label>
                     </div>
                     <div class="form-check mt-1 ml-3">
                         <label class="inline-flex items-center">
                             <input class="form-checkbox" type="checkbox" v-model="pluginData.cruds[crud.id]['inputs']" @change="save">
-                            <span class="ml-2 text-gray-800">Inputs</span>
+                            <span class="ml-2 text-gray-800 dark:text-gray-300">Inputs</span>
                         </label>
                     </div>
                     <small class="mb-1 ml-3">Relationships</small>
                     <div class="form-check my-1 ml-3" v-for="relationship in getAllRelationshipsFromModel(crud.model)" :key="'rel' + relationship.id">
                         <label class="inline-flex items-center">
                             <input class="form-checkbox" type="checkbox" v-model="pluginData.cruds[crud.id]['relationships'][relationship.id]" @change="save">
-                            <span class="ml-2 text-gray-800">{{ `${relationship.type.case('pascalCase')} (${relationship.name.case('pascalCase')})` }}</span>
+                            <span class="ml-2 text-gray-800 dark:text-gray-300">{{ `${relationship.type.case('pascalCase')} (${relationship.name.case('pascalCase')})` }}</span>
                         </label>
                     </div>
                 </div>
