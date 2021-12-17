@@ -1,11 +1,11 @@
 module.exports = (vemto) => {
 
     return {
+        crudsSelectedForNova() {
+            let pluginData = vemto.getPluginData(),
+                hasCrudForGenerate = pluginData.cruds.find(crud => crud && crud.selected)
 
-        crudsAllowedForNova() {
-            let pluginData = vemto.getPluginData()
-
-            if(!pluginData.cruds.length) {
+            if(!hasCrudForGenerate) {
                 vemto.log.error('Select a CRUD on the plugin page for generating a Nova Resource')
                 return []
             }
@@ -15,18 +15,36 @@ module.exports = (vemto) => {
 
         onInstall() {
             vemto.savePluginData({
-                cruds: {},
-                inputs: {},
-                relationships: {}
+                cruds: this.generateCrudsData()
             })
         },
 
+        generateCrudsData() {
+            let projectCruds = vemto.getProject().getMainCruds(),
+                crudsData = []
+
+            projectCruds.forEach(crud => {
+                let crudData = { 'selected': false, 'inputs': false, 'relationships': [] },
+                    crudRelationships = this.getAllRelationshipsFromModel(crud.model)
+
+                if(crudRelationships.length) {
+                    crudRelationships.forEach(rel => {
+                        crudData.relationships[rel.id] = false
+                    })
+                }
+
+                crudsData[crud.id] = crudData
+            })
+            
+            return crudsData.map(crud => crud)
+        },
+
         beforeCodeGenerationEnd() {
-            let selectedCruds = this.crudsAllowedForNova()
+            let selectedCruds = this.crudsSelectedForNova()
 
             if(!selectedCruds.length) return
 
-            selectedCruds = Object.keys(selectedCruds).filter(crud => selectedCruds[crud])
+            selectedCruds = Object.keys(selectedCruds).filter(crud => selectedCruds[crud] && selectedCruds[crud].selected)
 
             this.generateNovaFiles(selectedCruds)
         },
@@ -42,7 +60,7 @@ module.exports = (vemto) => {
 
             let projectCruds = vemto.getProject().getMainCruds()
 
-                selectedCruds.forEach(crudId => {
+            selectedCruds.forEach(crudId => {
                 let crud = projectCruds.find(crud => crud.id == crudId)
 
                 if(!crud) return

@@ -7,17 +7,32 @@
             <label class="block text-sm font-bold mb-2">Project CRUDs</label>
 
             <div class="form-check mb-3">
-                <input class="form-check-input appearance-none border border-gray-300 mr-2 rounded-sm bg-white checked:bg-blue-600 checked:border-blue-600 focus:outline-none transition duration-200 cursor-pointer" type="checkbox" id="selectAllCruds" @change="selectAllCruds">
-                <label class="form-check-label inline-block text-gray-800 mt-1" for="selectAllCruds">
-                    Select All
+                <label class="inline-flex items-center" for="selectAllCruds">
+                    <input class="form-checkbox" type="checkbox" id="selectAllCruds" @change="selectAllData">
+                    <span class="ml-2 text-gray-800">Select All</span>
                 </label>
             </div>
             
-            <div class="form-check" v-for="crud in cruds" :key="crud.id">
-                <input class="form-check-input appearance-none border border-gray-300 mr-2 rounded-sm bg-white checked:bg-blue-600 checked:border-blue-600 focus:outline-none transition duration-200 cursor-pointer" type="checkbox" v-model="selectedCruds[crud.id]" :id="crud.id" @change="save">
-                <label class="form-check-label inline-block text-gray-800 mt-1" :for="crud.id">
-                    {{ crud.name }}
-                </label>
+            <div class="bg-gray-100 border border-gray-300 p-2 rounded-md my-3" v-for="crud in projectCruds" :key="'crud' + crud.id">
+                <div class="form-check">
+                    <label class="inline-flex items-center text-gray-800" :for="crud.id">
+                        <input class="form-checkbox" type="checkbox" v-model="pluginData.cruds[crud.id]['selected']" :id="crud.id" @change="toggleCrudData(crud)">
+                        <span class="ml-2 text-gray-800">{{ crud.name }}</span>
+                    </label>
+                </div>
+                <div class="form-check mt-1 ml-3">
+                    <label class="inline-flex items-center">
+                        <input class="form-checkbox" type="checkbox" v-model="pluginData.cruds[crud.id]['inputs']" @change="save">
+                        <span class="ml-2 text-gray-800">Inputs</span>
+                    </label>
+                </div>
+                <small class="mb-1 ml-3">Relationships</small>
+                <div class="form-check my-1 ml-3" v-for="relationship in getAllRelationshipsFromModel(crud.model)" :key="'rel' + relationship.id">
+                    <label class="inline-flex items-center">
+                        <input class="form-checkbox" type="checkbox" v-model="pluginData.cruds[crud.id]['relationships'][relationship.id]" @change="save">
+                        <span class="ml-2 text-gray-800">{{ `${relationship.type.case('pascalCase')} (${relationship.name.case('pascalCase')})` }}</span>
+                    </label>
+                </div>
             </div>
         </div>
     </div>
@@ -26,51 +41,79 @@
 export default {
     data() {
         return {
-            cruds: [],
-            pluginData: {},
-            selectedCruds: [],
+            projectCruds: [],
+            pluginData: [],
         }
     },
 
     created() {
-        this.cruds = window.vemtoApi.getProject().getMainCruds()
         this.pluginData = window.vemtoApi.getPluginData()
+        this.projectCruds = window.vemtoApi.getProject().getMainCruds()
 
-        this.loadCruds()
+        this.checkNewProjectCruds()
     },
 
     methods: {
-        loadCruds() {
-            let pluginDataCruds = this.pluginData.cruds
+        getAllRelationshipsFromModel(model) {
+            let basicRelationships = model.getAllRelationships(),
+                morphRelationships = model.getAllMorphRelationships()
 
-            if(!pluginDataCruds.length) return
-            
-            this.cruds.forEach(crud => {
-                if(pluginDataCruds[crud.id]) {
-                    this.selectCrud(crud)
-                }
-            })
+            return [].concat(
+                basicRelationships, morphRelationships
+            )
         },
 
-        selectAllCruds(event) {
-            let isChecked = event.target.checked
+        toggleCrudData(crud) {
+            let crudData = this.pluginData.cruds[crud.id]
 
-            if(isChecked) {
-                this.cruds.forEach(crud => this.selectCrud(crud))
-            } else {
-                this.selectedCruds = {}
-            }
+            this.$set(crudData, 'inputs', crudData.selected)
+
+            crudData.relationships.forEach((rel, index) => {
+                this.$set(crudData.relationships, index, crudData.selected)
+            })
 
             this.save()
         },
 
-        selectCrud(crud) {
-            this.$set(this.selectedCruds, crud.id, true)
+        selectAllData(event) {
+            let isChecked = event.target.checked
+
+            this.pluginData.cruds.forEach(crudData => {
+                if(!crudData) return
+
+                crudData.selected = isChecked
+                crudData.inputs = isChecked
+
+                crudData.relationships.forEach((rel, index) => {
+                    crudData.relationships[index] = isChecked
+                })
+            })
+
+            this.save()
+        },
+        
+        checkNewProjectCruds() {
+            this.projectCruds.forEach(crud => {
+                if(this.pluginData.cruds[crud.id]) return
+
+                let crudData = { 'selected': false, 'inputs': false, 'relationships': [] },
+                    crudRelationships = this.getAllRelationshipsFromModel(crud.model)
+
+                if(crudRelationships.length) {
+                    crudRelationships.forEach(rel => {
+                        crudData.relationships[rel.id] = false
+                    })
+                }
+
+                this.pluginData.cruds[crud.id] = crudData
+            })
+
+            this.save()
         },
 
         save: window.vemtoApi.debounce(function() {
             window.vemtoApi.savePluginData({
-                cruds: this.selectedCruds
+                cruds: this.pluginData.cruds
             })
         }, 300)
     }

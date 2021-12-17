@@ -1,5 +1,6 @@
 <?php
 <# TEMPLATE VARIABLES #>
+<% let crudPluginData = this.pluginData.cruds[this.crud.id] %>
 <% let crudModelName = this.crud.model.name %>
 <% let modelsNamespace = this.projectHelper.getModelsNamespace() %>
 <####>
@@ -83,7 +84,7 @@ class <$ crudModelName $> extends Resource
         return [
             ID::make('id')->sortable(),
 
-            <% if(this.crud.inputs.length) { %>
+            <% if(this.crud.inputs.length && crudPluginData.inputs) { %>
                 <# Crud inputs #>
                 <% for(let input of this.getInputsForNova(this.crud)) { %>
                     <###>
@@ -143,14 +144,17 @@ class <$ crudModelName $> extends Resource
             <% } %>
 
             <% for(let relationship of this.getAllRelationshipsFromModel(this.crud.model)) { %>
-                <% let relInput = relationship.inputs ? relationship.inputs[0] : null %>
                 <###>
-                <$ relationship.type.case('pascalCase') $>::make('<$ this.getRelationshipModelName(relationship) $>')
-                <###>
-                <% if(relInput && relInput.field.nullable) { %>
-                    ->nullable()
-                <% } %>,
-                
+                <% if(crudPluginData.relationships[relationship.id]) { %>
+                    <% let relInput = relationship.inputs ? relationship.inputs[0] : null %>
+                    <###>
+                    <$ relationship.type.case('pascalCase') $>::make('<$ this.getRelationshipModelName(relationship) $>')
+                    <###>
+                    <% if(relInput && relInput.field.nullable) { %>
+                        ->nullable()
+                    <% } %>,
+
+                <% } %>
             <% } %>
         ];
     }

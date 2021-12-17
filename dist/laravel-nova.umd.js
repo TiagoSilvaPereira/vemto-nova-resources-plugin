@@ -179,6 +179,15 @@ module.exports = store;
 
 /***/ }),
 
+/***/ "13f2":
+/***/ (function(module, exports) {
+
+// eslint-disable-next-line es/no-object-getownpropertysymbols -- safe
+exports.f = Object.getOwnPropertySymbols;
+
+
+/***/ }),
+
 /***/ "14c5":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -207,6 +216,47 @@ module.exports = !fails(function () {
 
 /***/ }),
 
+/***/ "22f2":
+/***/ (function(module, exports, __webpack_require__) {
+
+// toObject with fallback for non-array-like ES3 strings
+var IndexedObject = __webpack_require__("8b50");
+var requireObjectCoercible = __webpack_require__("38a9");
+
+module.exports = function (it) {
+  return IndexedObject(requireObjectCoercible(it));
+};
+
+
+/***/ }),
+
+/***/ "23a3":
+/***/ (function(module, exports, __webpack_require__) {
+
+var uncurryThis = __webpack_require__("60a7");
+var hasOwn = __webpack_require__("801f");
+var toIndexedObject = __webpack_require__("22f2");
+var indexOf = __webpack_require__("7a1e").indexOf;
+var hiddenKeys = __webpack_require__("a5f6");
+
+var push = uncurryThis([].push);
+
+module.exports = function (object, names) {
+  var O = toIndexedObject(object);
+  var i = 0;
+  var result = [];
+  var key;
+  for (key in O) !hasOwn(hiddenKeys, key) && hasOwn(O, key) && push(result, key);
+  // Don't enum bug & hidden keys
+  while (names.length > i) if (hasOwn(O, key = names[i++])) {
+    ~indexOf(result, key) || push(result, key);
+  }
+  return result;
+};
+
+
+/***/ }),
+
 /***/ "275f":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -223,12 +273,55 @@ if (!TO_STRING_TAG_SUPPORT) {
 
 /***/ }),
 
+/***/ "282e":
+/***/ (function(module, exports, __webpack_require__) {
+
+var hasOwn = __webpack_require__("801f");
+var ownKeys = __webpack_require__("3302");
+var getOwnPropertyDescriptorModule = __webpack_require__("9af0");
+var definePropertyModule = __webpack_require__("63d5");
+
+module.exports = function (target, source) {
+  var keys = ownKeys(source);
+  var defineProperty = definePropertyModule.f;
+  var getOwnPropertyDescriptor = getOwnPropertyDescriptorModule.f;
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (!hasOwn(target, key)) defineProperty(target, key, getOwnPropertyDescriptor(source, key));
+  }
+};
+
+
+/***/ }),
+
 /***/ "288c":
 /***/ (function(module, exports, __webpack_require__) {
 
 var getBuiltIn = __webpack_require__("0074");
 
 module.exports = getBuiltIn('navigator', 'userAgent') || '';
+
+
+/***/ }),
+
+/***/ "2ab5":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var $propertyIsEnumerable = {}.propertyIsEnumerable;
+// eslint-disable-next-line es/no-object-getownpropertydescriptor -- safe
+var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+
+// Nashorn ~ JDK8 bug
+var NASHORN_BUG = getOwnPropertyDescriptor && !$propertyIsEnumerable.call({ 1: 2 }, 1);
+
+// `Object.prototype.propertyIsEnumerable` method implementation
+// https://tc39.es/ecma262/#sec-object.prototype.propertyisenumerable
+exports.f = NASHORN_BUG ? function propertyIsEnumerable(V) {
+  var descriptor = getOwnPropertyDescriptor(this, V);
+  return !!descriptor && descriptor.enumerable;
+} : $propertyIsEnumerable;
 
 
 /***/ }),
@@ -319,6 +412,27 @@ var TEMPLATE = String(String).split('String');
 })(Function.prototype, 'toString', function toString() {
   return isCallable(this) && getInternalState(this).source || inspectSource(this);
 });
+
+
+/***/ }),
+
+/***/ "3302":
+/***/ (function(module, exports, __webpack_require__) {
+
+var getBuiltIn = __webpack_require__("0074");
+var uncurryThis = __webpack_require__("60a7");
+var getOwnPropertyNamesModule = __webpack_require__("a5d2");
+var getOwnPropertySymbolsModule = __webpack_require__("13f2");
+var anObject = __webpack_require__("7c73");
+
+var concat = uncurryThis([].concat);
+
+// all object keys, includes non-enumerable and symbols
+module.exports = getBuiltIn('Reflect', 'ownKeys') || function ownKeys(it) {
+  var keys = getOwnPropertyNamesModule.f(anObject(it));
+  var getOwnPropertySymbols = getOwnPropertySymbolsModule.f;
+  return getOwnPropertySymbols ? concat(keys, getOwnPropertySymbols(it)) : keys;
+};
 
 
 /***/ }),
@@ -502,6 +616,23 @@ handlePrototype(DOMTokenListPrototype);
 
 /***/ }),
 
+/***/ "4089":
+/***/ (function(module, exports) {
+
+// IE8- don't enum bug keys
+module.exports = [
+  'constructor',
+  'hasOwnProperty',
+  'isPrototypeOf',
+  'propertyIsEnumerable',
+  'toLocaleString',
+  'toString',
+  'valueOf'
+];
+
+
+/***/ }),
+
 /***/ "44a2":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -533,6 +664,32 @@ var store = __webpack_require__("13e3");
   mode: IS_PURE ? 'pure' : 'global',
   copyright: '© 2021 Denis Pushkarev (zloirock.ru)'
 });
+
+
+/***/ }),
+
+/***/ "4bc9":
+/***/ (function(module, exports, __webpack_require__) {
+
+var fails = __webpack_require__("c80c");
+var wellKnownSymbol = __webpack_require__("0a38");
+var V8_VERSION = __webpack_require__("c3d5");
+
+var SPECIES = wellKnownSymbol('species');
+
+module.exports = function (METHOD_NAME) {
+  // We can't use this feature detection in V8 since it causes
+  // deoptimization and serious performance degradation
+  // https://github.com/zloirock/core-js/issues/677
+  return V8_VERSION >= 51 || !fails(function () {
+    var array = [];
+    var constructor = array.constructor = {};
+    constructor[SPECIES] = function () {
+      return { foo: 1 };
+    };
+    return array[METHOD_NAME](Boolean).foo !== 1;
+  });
+};
 
 
 /***/ }),
@@ -571,6 +728,68 @@ module.exports = !STRICT_METHOD ? function forEach(callbackfn /* , thisArg */) {
   return $forEach(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
 // eslint-disable-next-line es/no-array-prototype-foreach -- safe
 } : [].forEach;
+
+
+/***/ }),
+
+/***/ "5903":
+/***/ (function(module, exports, __webpack_require__) {
+
+var global = __webpack_require__("9a9b");
+var getOwnPropertyDescriptor = __webpack_require__("9af0").f;
+var createNonEnumerableProperty = __webpack_require__("ace8");
+var redefine = __webpack_require__("302b");
+var setGlobal = __webpack_require__("98b3");
+var copyConstructorProperties = __webpack_require__("282e");
+var isForced = __webpack_require__("dacb");
+
+/*
+  options.target      - name of the target object
+  options.global      - target is the global object
+  options.stat        - export as static methods of target
+  options.proto       - export as prototype methods of target
+  options.real        - real prototype method for the `pure` version
+  options.forced      - export even if the native feature is available
+  options.bind        - bind methods to the target, required for the `pure` version
+  options.wrap        - wrap constructors to preventing global pollution, required for the `pure` version
+  options.unsafe      - use the simple assignment of property instead of delete + defineProperty
+  options.sham        - add a flag to not completely full polyfills
+  options.enumerable  - export as enumerable property
+  options.noTargetGet - prevent calling a getter on target
+  options.name        - the .name of the function if it does not match the key
+*/
+module.exports = function (options, source) {
+  var TARGET = options.target;
+  var GLOBAL = options.global;
+  var STATIC = options.stat;
+  var FORCED, target, key, targetProperty, sourceProperty, descriptor;
+  if (GLOBAL) {
+    target = global;
+  } else if (STATIC) {
+    target = global[TARGET] || setGlobal(TARGET, {});
+  } else {
+    target = (global[TARGET] || {}).prototype;
+  }
+  if (target) for (key in source) {
+    sourceProperty = source[key];
+    if (options.noTargetGet) {
+      descriptor = getOwnPropertyDescriptor(target, key);
+      targetProperty = descriptor && descriptor.value;
+    } else targetProperty = target[key];
+    FORCED = isForced(GLOBAL ? key : TARGET + (STATIC ? '.' : '#') + key, options.forced);
+    // contained in target
+    if (!FORCED && targetProperty !== undefined) {
+      if (typeof sourceProperty == typeof targetProperty) continue;
+      copyConstructorProperties(sourceProperty, targetProperty);
+    }
+    // add a flag to not completely full polyfills
+    if (options.sham || (targetProperty && targetProperty.sham)) {
+      createNonEnumerableProperty(sourceProperty, 'sham', true);
+    }
+    // extend global
+    redefine(target, key, sourceProperty, options);
+  }
+};
 
 
 /***/ }),
@@ -913,6 +1132,45 @@ module.exports = function (input, pref) {
 
 /***/ }),
 
+/***/ "7a1e":
+/***/ (function(module, exports, __webpack_require__) {
+
+var toIndexedObject = __webpack_require__("22f2");
+var toAbsoluteIndex = __webpack_require__("c1a2");
+var lengthOfArrayLike = __webpack_require__("2ae8");
+
+// `Array.prototype.{ indexOf, includes }` methods implementation
+var createMethod = function (IS_INCLUDES) {
+  return function ($this, el, fromIndex) {
+    var O = toIndexedObject($this);
+    var length = lengthOfArrayLike(O);
+    var index = toAbsoluteIndex(fromIndex, length);
+    var value;
+    // Array#includes uses SameValueZero equality algorithm
+    // eslint-disable-next-line no-self-compare -- NaN check
+    if (IS_INCLUDES && el != el) while (length > index) {
+      value = O[index++];
+      // eslint-disable-next-line no-self-compare -- NaN check
+      if (value != value) return true;
+    // Array#indexOf ignores holes, Array#includes - not
+    } else for (;length > index; index++) {
+      if ((IS_INCLUDES || index in O) && O[index] === el) return IS_INCLUDES || index || 0;
+    } return !IS_INCLUDES && -1;
+  };
+};
+
+module.exports = {
+  // `Array.prototype.includes` method
+  // https://tc39.es/ecma262/#sec-array.prototype.includes
+  includes: createMethod(true),
+  // `Array.prototype.indexOf` method
+  // https://tc39.es/ecma262/#sec-array.prototype.indexof
+  indexOf: createMethod(false)
+};
+
+
+/***/ }),
+
 /***/ "7a27":
 /***/ (function(module, exports) {
 
@@ -1128,6 +1386,35 @@ module.exports =
 
 /***/ }),
 
+/***/ "9af0":
+/***/ (function(module, exports, __webpack_require__) {
+
+var DESCRIPTORS = __webpack_require__("15f4");
+var call = __webpack_require__("68ef");
+var propertyIsEnumerableModule = __webpack_require__("2ab5");
+var createPropertyDescriptor = __webpack_require__("8398");
+var toIndexedObject = __webpack_require__("22f2");
+var toPropertyKey = __webpack_require__("cf4c");
+var hasOwn = __webpack_require__("801f");
+var IE8_DOM_DEFINE = __webpack_require__("9d16");
+
+// eslint-disable-next-line es/no-object-getownpropertydescriptor -- safe
+var $getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+
+// `Object.getOwnPropertyDescriptor` method
+// https://tc39.es/ecma262/#sec-object.getownpropertydescriptor
+exports.f = DESCRIPTORS ? $getOwnPropertyDescriptor : function getOwnPropertyDescriptor(O, P) {
+  O = toIndexedObject(O);
+  P = toPropertyKey(P);
+  if (IE8_DOM_DEFINE) try {
+    return $getOwnPropertyDescriptor(O, P);
+  } catch (error) { /* empty */ }
+  if (hasOwn(O, P)) return createPropertyDescriptor(!call(propertyIsEnumerableModule.f, O, P), O[P]);
+};
+
+
+/***/ }),
+
 /***/ "9d16":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1142,6 +1429,95 @@ module.exports = !DESCRIPTORS && !fails(function () {
     get: function () { return 7; }
   }).a != 7;
 });
+
+
+/***/ }),
+
+/***/ "a088":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var $ = __webpack_require__("5903");
+var global = __webpack_require__("9a9b");
+var fails = __webpack_require__("c80c");
+var isArray = __webpack_require__("6950");
+var isObject = __webpack_require__("ca38");
+var toObject = __webpack_require__("80eb");
+var lengthOfArrayLike = __webpack_require__("2ae8");
+var createProperty = __webpack_require__("ce86");
+var arraySpeciesCreate = __webpack_require__("14c5");
+var arrayMethodHasSpeciesSupport = __webpack_require__("4bc9");
+var wellKnownSymbol = __webpack_require__("0a38");
+var V8_VERSION = __webpack_require__("c3d5");
+
+var IS_CONCAT_SPREADABLE = wellKnownSymbol('isConcatSpreadable');
+var MAX_SAFE_INTEGER = 0x1FFFFFFFFFFFFF;
+var MAXIMUM_ALLOWED_INDEX_EXCEEDED = 'Maximum allowed index exceeded';
+var TypeError = global.TypeError;
+
+// We can't use this feature detection in V8 since it causes
+// deoptimization and serious performance degradation
+// https://github.com/zloirock/core-js/issues/679
+var IS_CONCAT_SPREADABLE_SUPPORT = V8_VERSION >= 51 || !fails(function () {
+  var array = [];
+  array[IS_CONCAT_SPREADABLE] = false;
+  return array.concat()[0] !== array;
+});
+
+var SPECIES_SUPPORT = arrayMethodHasSpeciesSupport('concat');
+
+var isConcatSpreadable = function (O) {
+  if (!isObject(O)) return false;
+  var spreadable = O[IS_CONCAT_SPREADABLE];
+  return spreadable !== undefined ? !!spreadable : isArray(O);
+};
+
+var FORCED = !IS_CONCAT_SPREADABLE_SUPPORT || !SPECIES_SUPPORT;
+
+// `Array.prototype.concat` method
+// https://tc39.es/ecma262/#sec-array.prototype.concat
+// with adding support of @@isConcatSpreadable and @@species
+$({ target: 'Array', proto: true, forced: FORCED }, {
+  // eslint-disable-next-line no-unused-vars -- required for `.length`
+  concat: function concat(arg) {
+    var O = toObject(this);
+    var A = arraySpeciesCreate(O, 0);
+    var n = 0;
+    var i, k, length, len, E;
+    for (i = -1, length = arguments.length; i < length; i++) {
+      E = i === -1 ? O : arguments[i];
+      if (isConcatSpreadable(E)) {
+        len = lengthOfArrayLike(E);
+        if (n + len > MAX_SAFE_INTEGER) throw TypeError(MAXIMUM_ALLOWED_INDEX_EXCEEDED);
+        for (k = 0; k < len; k++, n++) if (k in E) createProperty(A, n, E[k]);
+      } else {
+        if (n >= MAX_SAFE_INTEGER) throw TypeError(MAXIMUM_ALLOWED_INDEX_EXCEEDED);
+        createProperty(A, n++, E);
+      }
+    }
+    A.length = n;
+    return A;
+  }
+});
+
+
+/***/ }),
+
+/***/ "a5d2":
+/***/ (function(module, exports, __webpack_require__) {
+
+var internalObjectKeys = __webpack_require__("23a3");
+var enumBugKeys = __webpack_require__("4089");
+
+var hiddenKeys = enumBugKeys.concat('length', 'prototype');
+
+// `Object.getOwnPropertyNames` method
+// https://tc39.es/ecma262/#sec-object.getownpropertynames
+// eslint-disable-next-line es/no-object-getownpropertynames -- safe
+exports.f = Object.getOwnPropertyNames || function getOwnPropertyNames(O) {
+  return internalObjectKeys(O, hiddenKeys);
+};
 
 
 /***/ }),
@@ -1220,6 +1596,25 @@ var classof = __webpack_require__("5e2f");
 // https://tc39.es/ecma262/#sec-object.prototype.tostring
 module.exports = TO_STRING_TAG_SUPPORT ? {}.toString : function toString() {
   return '[object ' + classof(this) + ']';
+};
+
+
+/***/ }),
+
+/***/ "c1a2":
+/***/ (function(module, exports, __webpack_require__) {
+
+var toIntegerOrInfinity = __webpack_require__("7a27");
+
+var max = Math.max;
+var min = Math.min;
+
+// Helper for a popular repeating case of the spec:
+// Let integer be ? ToInteger(index).
+// If integer < 0, let result be max((length + integer), 0); else let result be min(integer, length).
+module.exports = function (index, length) {
+  var integer = toIntegerOrInfinity(index);
+  return integer < 0 ? max(integer + length, 0) : min(integer, length);
 };
 
 
@@ -1346,6 +1741,24 @@ module.exports = function (it) {
 
 /***/ }),
 
+/***/ "ce86":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var toPropertyKey = __webpack_require__("cf4c");
+var definePropertyModule = __webpack_require__("63d5");
+var createPropertyDescriptor = __webpack_require__("8398");
+
+module.exports = function (object, key, value) {
+  var propertyKey = toPropertyKey(key);
+  if (propertyKey in object) definePropertyModule.f(object, propertyKey, createPropertyDescriptor(0, value));
+  else object[propertyKey] = value;
+};
+
+
+/***/ }),
+
 /***/ "cf14":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1423,6 +1836,35 @@ var keys = shared('keys');
 module.exports = function (key) {
   return keys[key] || (keys[key] = uid(key));
 };
+
+
+/***/ }),
+
+/***/ "dacb":
+/***/ (function(module, exports, __webpack_require__) {
+
+var fails = __webpack_require__("c80c");
+var isCallable = __webpack_require__("c70d");
+
+var replacement = /#|\.prototype\./;
+
+var isForced = function (feature, detection) {
+  var value = data[normalize(feature)];
+  return value == POLYFILL ? true
+    : value == NATIVE ? false
+    : isCallable(detection) ? fails(detection)
+    : !!detection;
+};
+
+var normalize = isForced.normalize = function (string) {
+  return String(string).replace(replacement, '.').toLowerCase();
+};
+
+var data = isForced.data = {};
+var NATIVE = isForced.NATIVE = 'N';
+var POLYFILL = isForced.POLYFILL = 'P';
+
+module.exports = isForced;
 
 
 /***/ }),
@@ -1575,12 +2017,15 @@ if (typeof window !== 'undefined') {
 // Indicate to webpack that this file can be concatenated
 /* harmony default export */ var setPublicPath = (null);
 
-// CONCATENATED MODULE: C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/cache-loader/dist/cjs.js?{"cacheDirectory":"node_modules/.cache/vue-loader","cacheIdentifier":"025c84ce-vue-loader-template"}!C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/cache-loader/dist/cjs.js??ref--1-0!C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/vue-loader/lib??vue-loader-options!./src/Component.vue?vue&type=template&id=37b45eb7&
-var render = function () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"w-full"},[_c('label',{staticClass:"block text-sm font-bold"},[_vm._v("Laravel Nova Plugin")]),_c('small',{staticClass:"mb-2"},[_vm._v("Select the CRUDs to generate a Laravel Nova Resource")]),_c('div',{staticClass:"mt-5"},[_c('label',{staticClass:"block text-sm font-bold mb-2"},[_vm._v("Project CRUDs")]),_c('div',{staticClass:"form-check mb-3"},[_c('input',{staticClass:"form-check-input appearance-none border border-gray-300 mr-2 rounded-sm bg-white checked:bg-blue-600 checked:border-blue-600 focus:outline-none transition duration-200 cursor-pointer",attrs:{"type":"checkbox","id":"selectAllCruds"},on:{"change":_vm.selectAllCruds}}),_c('label',{staticClass:"form-check-label inline-block text-gray-800 mt-1",attrs:{"for":"selectAllCruds"}},[_vm._v(" Select All ")])]),_vm._l((_vm.cruds),function(crud){return _c('div',{key:crud.id,staticClass:"form-check"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.selectedCruds[crud.id]),expression:"selectedCruds[crud.id]"}],staticClass:"form-check-input appearance-none border border-gray-300 mr-2 rounded-sm bg-white checked:bg-blue-600 checked:border-blue-600 focus:outline-none transition duration-200 cursor-pointer",attrs:{"type":"checkbox","id":crud.id},domProps:{"checked":Array.isArray(_vm.selectedCruds[crud.id])?_vm._i(_vm.selectedCruds[crud.id],null)>-1:(_vm.selectedCruds[crud.id])},on:{"change":[function($event){var $$a=_vm.selectedCruds[crud.id],$$el=$event.target,$$c=$$el.checked?(true):(false);if(Array.isArray($$a)){var $$v=null,$$i=_vm._i($$a,$$v);if($$el.checked){$$i<0&&(_vm.$set(_vm.selectedCruds, crud.id, $$a.concat([$$v])))}else{$$i>-1&&(_vm.$set(_vm.selectedCruds, crud.id, $$a.slice(0,$$i).concat($$a.slice($$i+1))))}}else{_vm.$set(_vm.selectedCruds, crud.id, $$c)}},_vm.save]}}),_c('label',{staticClass:"form-check-label inline-block text-gray-800 mt-1",attrs:{"for":crud.id}},[_vm._v(" "+_vm._s(crud.name)+" ")])])})],2)])}
+// CONCATENATED MODULE: C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/cache-loader/dist/cjs.js?{"cacheDirectory":"node_modules/.cache/vue-loader","cacheIdentifier":"025c84ce-vue-loader-template"}!C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/cache-loader/dist/cjs.js??ref--1-0!C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/vue-loader/lib??vue-loader-options!./src/Component.vue?vue&type=template&id=7980c85d&
+var render = function () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"w-full"},[_c('label',{staticClass:"block text-sm font-bold"},[_vm._v("Laravel Nova Plugin")]),_c('small',{staticClass:"mb-2"},[_vm._v("Select the CRUDs to generate a Laravel Nova Resource")]),_c('div',{staticClass:"mt-5"},[_c('label',{staticClass:"block text-sm font-bold mb-2"},[_vm._v("Project CRUDs")]),_c('div',{staticClass:"form-check mb-3"},[_c('label',{staticClass:"inline-flex items-center",attrs:{"for":"selectAllCruds"}},[_c('input',{staticClass:"form-checkbox",attrs:{"type":"checkbox","id":"selectAllCruds"},on:{"change":_vm.selectAllData}}),_c('span',{staticClass:"ml-2 text-gray-800"},[_vm._v("Select All")])])]),_vm._l((_vm.projectCruds),function(crud){return _c('div',{key:'crud' + crud.id,staticClass:"bg-gray-100 border border-gray-300 p-2 rounded-md my-3"},[_c('div',{staticClass:"form-check"},[_c('label',{staticClass:"inline-flex items-center text-gray-800",attrs:{"for":crud.id}},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.pluginData.cruds[crud.id]['selected']),expression:"pluginData.cruds[crud.id]['selected']"}],staticClass:"form-checkbox",attrs:{"type":"checkbox","id":crud.id},domProps:{"checked":Array.isArray(_vm.pluginData.cruds[crud.id]['selected'])?_vm._i(_vm.pluginData.cruds[crud.id]['selected'],null)>-1:(_vm.pluginData.cruds[crud.id]['selected'])},on:{"change":[function($event){var $$a=_vm.pluginData.cruds[crud.id]['selected'],$$el=$event.target,$$c=$$el.checked?(true):(false);if(Array.isArray($$a)){var $$v=null,$$i=_vm._i($$a,$$v);if($$el.checked){$$i<0&&(_vm.$set(_vm.pluginData.cruds[crud.id], 'selected', $$a.concat([$$v])))}else{$$i>-1&&(_vm.$set(_vm.pluginData.cruds[crud.id], 'selected', $$a.slice(0,$$i).concat($$a.slice($$i+1))))}}else{_vm.$set(_vm.pluginData.cruds[crud.id], 'selected', $$c)}},function($event){return _vm.toggleCrudData(crud)}]}}),_c('span',{staticClass:"ml-2 text-gray-800"},[_vm._v(_vm._s(crud.name))])])]),_c('div',{staticClass:"form-check mt-1 ml-3"},[_c('label',{staticClass:"inline-flex items-center"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.pluginData.cruds[crud.id]['inputs']),expression:"pluginData.cruds[crud.id]['inputs']"}],staticClass:"form-checkbox",attrs:{"type":"checkbox"},domProps:{"checked":Array.isArray(_vm.pluginData.cruds[crud.id]['inputs'])?_vm._i(_vm.pluginData.cruds[crud.id]['inputs'],null)>-1:(_vm.pluginData.cruds[crud.id]['inputs'])},on:{"change":[function($event){var $$a=_vm.pluginData.cruds[crud.id]['inputs'],$$el=$event.target,$$c=$$el.checked?(true):(false);if(Array.isArray($$a)){var $$v=null,$$i=_vm._i($$a,$$v);if($$el.checked){$$i<0&&(_vm.$set(_vm.pluginData.cruds[crud.id], 'inputs', $$a.concat([$$v])))}else{$$i>-1&&(_vm.$set(_vm.pluginData.cruds[crud.id], 'inputs', $$a.slice(0,$$i).concat($$a.slice($$i+1))))}}else{_vm.$set(_vm.pluginData.cruds[crud.id], 'inputs', $$c)}},_vm.save]}}),_c('span',{staticClass:"ml-2 text-gray-800"},[_vm._v("Inputs")])])]),_c('small',{staticClass:"mb-1 ml-3"},[_vm._v("Relationships")]),_vm._l((_vm.getAllRelationshipsFromModel(crud.model)),function(relationship){return _c('div',{key:'rel' + relationship.id,staticClass:"form-check my-1 ml-3"},[_c('label',{staticClass:"inline-flex items-center"},[_c('input',{directives:[{name:"model",rawName:"v-model",value:(_vm.pluginData.cruds[crud.id]['relationships'][relationship.id]),expression:"pluginData.cruds[crud.id]['relationships'][relationship.id]"}],staticClass:"form-checkbox",attrs:{"type":"checkbox"},domProps:{"checked":Array.isArray(_vm.pluginData.cruds[crud.id]['relationships'][relationship.id])?_vm._i(_vm.pluginData.cruds[crud.id]['relationships'][relationship.id],null)>-1:(_vm.pluginData.cruds[crud.id]['relationships'][relationship.id])},on:{"change":[function($event){var $$a=_vm.pluginData.cruds[crud.id]['relationships'][relationship.id],$$el=$event.target,$$c=$$el.checked?(true):(false);if(Array.isArray($$a)){var $$v=null,$$i=_vm._i($$a,$$v);if($$el.checked){$$i<0&&(_vm.$set(_vm.pluginData.cruds[crud.id]['relationships'], relationship.id, $$a.concat([$$v])))}else{$$i>-1&&(_vm.$set(_vm.pluginData.cruds[crud.id]['relationships'], relationship.id, $$a.slice(0,$$i).concat($$a.slice($$i+1))))}}else{_vm.$set(_vm.pluginData.cruds[crud.id]['relationships'], relationship.id, $$c)}},_vm.save]}}),_c('span',{staticClass:"ml-2 text-gray-800"},[_vm._v(_vm._s(((relationship.type.case('pascalCase')) + " (" + (relationship.name.case('pascalCase')) + ")")))])])])})],2)})],2)])}
 var staticRenderFns = []
 
 
-// CONCATENATED MODULE: ./src/Component.vue?vue&type=template&id=37b45eb7&
+// CONCATENATED MODULE: ./src/Component.vue?vue&type=template&id=7980c85d&
+
+// EXTERNAL MODULE: C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/core-js/modules/es.array.concat.js
+var es_array_concat = __webpack_require__("a088");
 
 // EXTERNAL MODULE: C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/core-js/modules/es.object.to-string.js
 var es_object_to_string = __webpack_require__("275f");
@@ -1591,6 +2036,22 @@ var web_dom_collections_for_each = __webpack_require__("3fc6");
 // CONCATENATED MODULE: C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/thread-loader/dist/cjs.js!C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/babel-loader/lib??ref--13-1!C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/cache-loader/dist/cjs.js??ref--1-0!C:/Users/T-Gamer/AppData/Roaming/npm/node_modules/@vue/cli-service-global/node_modules/vue-loader/lib??vue-loader-options!./src/Component.vue?vue&type=script&lang=js&
 
 
+
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 //
 //
 //
@@ -1618,49 +2079,69 @@ var web_dom_collections_for_each = __webpack_require__("3fc6");
 /* harmony default export */ var Componentvue_type_script_lang_js_ = ({
   data: function data() {
     return {
-      cruds: [],
-      pluginData: {},
-      selectedCruds: []
+      projectCruds: [],
+      pluginData: []
     };
   },
   created: function created() {
-    this.cruds = window.vemtoApi.getProject().getMainCruds();
     this.pluginData = window.vemtoApi.getPluginData();
-    this.loadCruds();
+    this.projectCruds = window.vemtoApi.getProject().getMainCruds();
+    this.checkNewCruds();
   },
   methods: {
-    loadCruds: function loadCruds() {
+    getAllRelationshipsFromModel: function getAllRelationshipsFromModel(model) {
+      var basicRelationships = model.getAllRelationships(),
+          morphRelationships = model.getAllMorphRelationships();
+      return [].concat(basicRelationships, morphRelationships);
+    },
+    toggleCrudData: function toggleCrudData(crud) {
       var _this = this;
 
-      var pluginDataCruds = this.pluginData.cruds;
-      if (!pluginDataCruds.length) return;
-      this.cruds.forEach(function (crud) {
-        if (pluginDataCruds[crud.id]) {
-          _this.selectCrud(crud);
-        }
+      var crudData = this.pluginData.cruds[crud.id];
+      this.$set(crudData, 'inputs', crudData.selected);
+      crudData.relationships.forEach(function (rel, index) {
+        _this.$set(crudData.relationships, index, crudData.selected);
       });
-    },
-    selectAllCruds: function selectAllCruds(event) {
-      var _this2 = this;
-
-      var isChecked = event.target.checked;
-
-      if (isChecked) {
-        this.cruds.forEach(function (crud) {
-          return _this2.selectCrud(crud);
-        });
-      } else {
-        this.selectedCruds = {};
-      }
-
       this.save();
     },
-    selectCrud: function selectCrud(crud) {
-      this.$set(this.selectedCruds, crud.id, true);
+    selectAllData: function selectAllData(event) {
+      var isChecked = event.target.checked;
+      this.pluginData.cruds.forEach(function (crudData) {
+        if (!crudData) return;
+        crudData.selected = isChecked;
+        crudData.inputs = isChecked;
+        crudData.relationships.forEach(function (rel, index) {
+          crudData.relationships[index] = isChecked;
+        });
+      });
+      this.save();
+    },
+    checkNewCruds: function checkNewCruds() {
+      var _this2 = this;
+
+      this.projectCruds.forEach(function (crud) {
+        if (_this2.pluginData.cruds[crud.id]) return;
+
+        var crudData = {
+          'selected': false,
+          'inputs': false,
+          'relationships': []
+        },
+            crudRelationships = _this2.getAllRelationshipsFromModel(crud.model);
+
+        if (crudRelationships.length) {
+          crudRelationships.forEach(function (rel) {
+            crudData.relationships[rel.id] = false;
+          });
+        }
+
+        _this2.pluginData.cruds[crud.id] = crudData;
+      });
+      this.save();
     },
     save: window.vemtoApi.debounce(function () {
       window.vemtoApi.savePluginData({
-        cruds: this.selectedCruds
+        cruds: this.pluginData.cruds
       });
     }, 300)
   }
