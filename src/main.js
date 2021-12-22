@@ -1,6 +1,21 @@
 module.exports = (vemto) => {
 
     return {
+        canInstall() {
+            let appVersion = vemto.project.version,
+                compareOptions = {
+                    numeric: false,
+                    sensitivity: 'base'
+                }
+
+            if(appVersion.localeCompare("1.0.4", undefined, compareOptions) < 0) {
+                vemto.addBlockReason('You have a smaller version than recommended to use the plugin')
+                return false
+            }
+
+            return true
+        },
+
         onInstall() {
             vemto.savePluginData({
                 cruds: this.generateCrudsData()
@@ -70,37 +85,43 @@ module.exports = (vemto) => {
                     crudModelRelationships = this.getAllRelationshipsFromModel(crud.model)
 
                 options.data = {
-                    crud,
-                    novaInputs,
+                    crud, novaInputs,
                     crudHasTextInputs,
                     crudModelRelationships,
-                    getTypeForNova: this.getTypeForNova,
+                    getTypeForNova: (input) => this.getTypeForNova(input, crud.model.name),
                     getValidationForNova: this.getValidationForNova,
                     getRelationshipModelName: this.getRelationshipModelName,
                     getUpdateValidationForNova: this.getUpdateValidationForNova,
-                    fieldName: (fieldName) => this.novaFieldNames(fieldName, crud.model.name)
+                    fieldName: (fieldName) => this.novaFieldNames(fieldName, crud.model.name),
+
+                    modules: [
+                        {name: 'crud', id: crud.id},
+                        {name: 'crud-settings', id: crud.id}
+                    ]
                 }
 
                 vemto.renderTemplate('files/NovaResource.vemtl', `${basePath}/${crud.model.name}.php`, options)
             })
         },
 
-        getTypeForNova(input) {
-            let textInputs = ['email', 'url']
+        getTypeForNova(input, className) {
+            let textInputs = ['Email', 'Url', 'Text'],
+                inputTypePascalCase = input.type.case('pascalCase'),
+                inputTypeForNova = ''
 
-            if(textInputs.includes(input.type)) {
-                return 'Text'
+            if(textInputs.includes(inputTypePascalCase)) {
+                inputTypeForNova = 'Text'
             }
     
-            if(input.isForRelationship()) {
-                return 'BelongsTo'
+            if(input.isCheckbox() && !inputTypeForNova.length) {
+                inputTypeForNova = 'Boolean'
             }
+
+            let novaFieldNames = this.getNovaFieldNames(),
+                inputType = inputTypeForNova.length ? inputTypeForNova : inputTypePascalCase
     
-            if(input.isCheckbox()) {
-                return 'Boolean'
-            }
-    
-            return input.type.case('pascalCase')
+            return novaFieldNames.includes(inputType) && inputType == className
+                    ? `Nova${inputType}` : inputType
         },
 
         crudHasTextInputs(crud){
@@ -153,18 +174,22 @@ module.exports = (vemto) => {
         },
 
         novaFieldNames(novaField, className) {
-            let novaFields = [
-                'Avatar', 'Badge', 'Boolean', 'BooleanGroup', 'Code', 'Country',
-                'Currency', 'Date', 'DateTime', 'File', 'Gravatar', 'Heading', 'Hidden', 'ID',
-                'Image', 'KeyValue', 'Markdown', 'Number', 'Password', 'PasswordConfirmation', 'Place', 'Select',
-                'Slug', 'Sparkline', 'Status', 'Stack', 'Text', 'Textarea', 'Timezone', 'Trix', 'VaporFile', 'VaporImage',
-            ]
+            let novaFields = this.getNovaFieldNames()
 
             if(novaFields.includes(className) && novaField == className) {
                 return `${novaField} as Nova${novaField}`
             }
 
             return novaField
+        },
+
+        getNovaFieldNames() {
+            return [
+                'Avatar', 'Badge', 'Boolean', 'BooleanGroup', 'Code', 'Country',
+                'Currency', 'Date', 'DateTime', 'File', 'Gravatar', 'Heading', 'Hidden', 'ID',
+                'Image', 'KeyValue', 'Markdown', 'Number', 'Password', 'PasswordConfirmation', 'Place', 'Select',
+                'Slug', 'Sparkline', 'Status', 'Stack', 'Text', 'Textarea', 'Timezone', 'Trix', 'VaporFile', 'VaporImage',
+            ]
         }
 
     }

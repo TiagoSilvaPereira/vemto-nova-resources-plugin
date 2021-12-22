@@ -44,12 +44,14 @@ export default {
         return {
             projectCruds: [],
             pluginData: [],
+            vemtoProject: {}
         }
     },
 
     created() {
+        this.vemtoProject = window.vemtoApi.getProject()
         this.pluginData = window.vemtoApi.getPluginData()
-        this.projectCruds = window.vemtoApi.getProject().getMainCruds()
+        this.projectCruds = this.vemtoProject.getMainCruds()
 
         if(this.pluginData.cruds) this.checkNewProjectCruds()
     },
@@ -72,6 +74,12 @@ export default {
             crudData.relationships.forEach((rel, index) => {
                 this.$set(crudData.relationships, index, crudData.selected)
             })
+
+            if(crudData.selected) {
+                this.vemtoProject.purgeRemovedModule('crud-settings', crud.id)
+            } else {
+                this.vemtoProject.registerRemovedModule('crud-settings', crud.id)
+            }
 
             this.save()
         },

@@ -10,41 +10,41 @@ namespace App\Nova;
 use Laravel\Nova\Fields\ID;
 use Illuminate\Http\Request;
 use Laravel\Nova\Http\Requests\NovaRequest;
-<% if(this.crudHasTextInputs(this.crud)) { %>
-use Laravel\Nova\Fields\Text;
+<% if(this.crudHasTextInputs) { %>
+use Laravel\Nova\Fields\<$ this.fieldName('Text') $>;
 <% } %>
 <% if(this.crud.hasSelectInputs()) { %>
-use Laravel\Nova\Fields\Select;
+use Laravel\Nova\Fields\<$ this.fieldName('Select') $>;
 <% } %>
 <% if(this.crud.hasImageInputs()) { %>
-use Laravel\Nova\Fields\Image;
+use Laravel\Nova\Fields\<$ this.fieldName('Image') $>;
 <% } %>
 <% if(this.crud.hasFileInputs()) { %>
-use Laravel\Nova\Fields\File;
+use Laravel\Nova\Fields\<$ this.fieldName('File') $>;
 <% } %>
 <% if(this.crud.hasNumericInputs()) { %>
-use Laravel\Nova\Fields\Number;
+use Laravel\Nova\Fields\<$ this.fieldName('Number') $>;
 <% } %>
 <% if(this.crud.hasTextareaInputs()) { %>
-use Laravel\Nova\Fields\Textarea;
+use Laravel\Nova\Fields\<$ this.fieldName('Textarea') $>;
 <% } %>
 <% if(this.crud.hasDateInputs()) { %>
-use Laravel\Nova\Fields\Date;
+use Laravel\Nova\Fields\<$ this.fieldName('Date') $>;
 <% } %>
 <% if(this.crud.hasDatetimeInputs()) { %>
-use Laravel\Nova\Fields\Datetime;
+use Laravel\Nova\Fields\<$ this.fieldName('Datetime') $>;
 <% } %>
 <% if(this.crud.hasPasswordInputs()) { %>
-use Laravel\Nova\Fields\Password;
+use Laravel\Nova\Fields\<$ this.fieldName('Password') $>;
 <% } %>
 <% if(this.crud.hasHiddenInputs()) { %>
-use Laravel\Nova\Fields\Hidden;
+use Laravel\Nova\Fields\<$ this.fieldName('Hidden') $>;
 <% } %>
 <% if(this.crud.hasCheckboxInputs()) { %>
-use Laravel\Nova\Fields\Boolean;
+use Laravel\Nova\Fields\<$ this.fieldName('Boolean') $>;
 <% } %>
 <###>
-<% for(let relationship of this.getAllRelationshipsFromModel(this.crud.model)) { %>
+<% for(let relationship of this.crudModelRelationships) { %>
     use Laravel\Nova\Fields\<$ relationship.type.case('pascalCase') $>;
 <% } %>
 
@@ -86,12 +86,9 @@ class <$ crudModelName $> extends Resource
 
             <% if(this.crud.inputs.length && crudPluginData.inputs) { %>
                 <# Crud inputs #>
-                <% for(let input of this.getInputsForNova(this.crud)) { %>
+                <% for(let input of this.novaInputs) { %>
                     <###>
-                    <% let inputName = input.isForRelationship() ? input.relationship.model.name : input.name.case('pascalCase') %>
-                    <% let inputNeedsOptions = input.isSelect() && !input.isForRelationship() %>
-                    <###>
-                    <$ this.getTypeForNova(input) $>::make('<$ inputName $>')
+                    <$ this.getTypeForNova(input) $>::make('<$ input.name.case('pascalCase') $>')
                         <% if(input.hasValidation() || input.hasUpdateValidation()) { %>
                             <###>
                             <% if(!input.hasDifferentUpdateValidation()) { %>
@@ -102,7 +99,7 @@ class <$ crudModelName $> extends Resource
                             <% } %>
                         <% } %>
                         <###>
-                        <% if(inputNeedsOptions) { %>
+                        <% if(input.isSelect()) { %>
                         ->searchable()
                         ->options([
                             <% for(let item of input.items) { %>
@@ -143,7 +140,7 @@ class <$ crudModelName $> extends Resource
                 <% } %>
             <% } %>
 
-            <% for(let relationship of this.getAllRelationshipsFromModel(this.crud.model)) { %>
+            <% for(let relationship of this.crudModelRelationships) { %>
                 <###>
                 <% if(crudPluginData.relationships[relationship.id]) { %>
                     <% let relInput = relationship.inputs ? relationship.inputs[0] : null %>
