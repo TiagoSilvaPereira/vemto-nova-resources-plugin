@@ -1,7 +1,6 @@
 <template>
     <div class="w-full">
-        <label class="block text-sm font-bold">Laravel Nova Plugin</label>
-        <small class="mb-2">Select the CRUDs to generate a Laravel Nova Resource</small>
+        <small class="mb-2">Please, select the CRUDs to generate a Laravel Nova Resource</small>
         
         <div class="mt-5">
             <label class="block text-sm font-bold mb-2">Project CRUDs</label>
@@ -14,7 +13,7 @@
             </div>
             
             <template v-if="!! pluginData.cruds">
-                <div class="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-900 p-2 rounded-md my-3" v-for="crud in projectCruds" :key="'crud' + crud.id">
+                <div class="bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-transparent p-2 rounded-md my-3" v-for="crud in projectCruds" :key="'crud' + crud.id">
                     <div class="form-check">
                         <label class="inline-flex items-center text-gray-800" :for="crud.id">
                             <input class="form-checkbox" type="checkbox" v-model="pluginData.cruds[crud.id]['selected']" :id="crud.id" @change="toggleCrudData(crud)">
@@ -107,7 +106,7 @@ export default {
                     })
                 }
 
-                this.pluginData.cruds[crud.id] = crudData
+                this.$set(this.pluginData.cruds, crud.id, crudData)
             })
 
             this.save()

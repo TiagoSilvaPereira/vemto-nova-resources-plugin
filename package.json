@@ -1,10 +1,10 @@
 {
     "version": "1.0.0",
-    "id": "app.vemto.laravel-nova",
-    "name": "laravel-nova",
-    "title": "Laravel Nova",
+    "id": "app.vemto.nova-resources",
+    "name": "nova-resources",
+    "title": "Laravel Nova Resources",
     "description": "Laravel Nova Plugin",
     "image": "",
     "main": "src/main.js",
-    "vueComponent": "dist/laravel-nova.umd.min.js"
+    "vueComponent": "dist/nova-resources.umd.min.js"
 }

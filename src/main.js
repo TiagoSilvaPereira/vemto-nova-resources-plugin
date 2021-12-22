@@ -1,18 +1,6 @@
 module.exports = (vemto) => {
 
     return {
-        crudsSelectedForNova() {
-            let pluginData = vemto.getPluginData(),
-                hasCrudForGenerate = pluginData.cruds.find(crud => crud && crud.selected)
-
-            if(!hasCrudForGenerate) {
-                vemto.log.error('Select a CRUD on the plugin page for generating a Nova Resource')
-                return []
-            }
-
-            return pluginData.cruds
-        },
-
         onInstall() {
             vemto.savePluginData({
                 cruds: this.generateCrudsData()
@@ -24,12 +12,12 @@ module.exports = (vemto) => {
                 crudsData = []
 
             projectCruds.forEach(crud => {
-                let crudData = { 'selected': false, 'inputs': false, 'relationships': [] },
+                let crudData = { 'selected': true, 'inputs': true, 'relationships': [] },
                     crudRelationships = this.getAllRelationshipsFromModel(crud.model)
 
                 if(crudRelationships.length) {
                     crudRelationships.forEach(rel => {
-                        crudData.relationships[rel.id] = false
+                        crudData.relationships[rel.id] = true
                     })
                 }
 
@@ -49,6 +37,18 @@ module.exports = (vemto) => {
             this.generateNovaFiles(selectedCruds)
         },
 
+        crudsSelectedForNova() {
+            let pluginData = vemto.getPluginData(),
+                hasCrudForGenerate = pluginData.cruds.find(crud => crud && crud.selected)
+
+            if(!hasCrudForGenerate) {
+                vemto.log.warning('No have a selected CRUD for generate a Nova Resource.')
+                return []
+            }
+
+            return pluginData.cruds
+        },
+
         generateNovaFiles(selectedCruds) {
             let basePath = 'app/Nova',
                 options = {
@@ -65,15 +65,20 @@ module.exports = (vemto) => {
 
                 if(!crud) return
 
+                let novaInputs = this.getInputsForNova(crud),
+                    crudHasTextInputs = this.crudHasTextInputs(crud),
+                    crudModelRelationships = this.getAllRelationshipsFromModel(crud.model)
+
                 options.data = {
                     crud,
+                    novaInputs,
+                    crudHasTextInputs,
+                    crudModelRelationships,
                     getTypeForNova: this.getTypeForNova,
-                    getInputsForNova: this.getInputsForNova,
-                    crudHasTextInputs: this.crudHasTextInputs,
                     getValidationForNova: this.getValidationForNova,
                     getRelationshipModelName: this.getRelationshipModelName,
                     getUpdateValidationForNova: this.getUpdateValidationForNova,
-                    getAllRelationshipsFromModel: this.getAllRelationshipsFromModel,
+                    fieldName: (fieldName) => this.novaFieldNames(fieldName, crud.model.name)
                 }
 
                 vemto.renderTemplate('files/NovaResource.vemtl', `${basePath}/${crud.model.name}.php`, options)
@@ -91,7 +96,7 @@ module.exports = (vemto) => {
                 return 'BelongsTo'
             }
     
-            if(input.type == 'checkbox') {
+            if(input.isCheckbox()) {
                 return 'Boolean'
             }
     
@@ -141,11 +146,26 @@ module.exports = (vemto) => {
             return relationship.model.name
         },
 
-        beforeRunnerStart() {
+        beforeRunnerEnd() {
             let projectSettings = vemto.getProject()
         
             vemto.openLink(`${projectSettings.url}/nova`)
         },
+
+        novaFieldNames(novaField, className) {
+            let novaFields = [
+                'Avatar', 'Badge', 'Boolean', 'BooleanGroup', 'Code', 'Country',
+                'Currency', 'Date', 'DateTime', 'File', 'Gravatar', 'Heading', 'Hidden', 'ID',
+                'Image', 'KeyValue', 'Markdown', 'Number', 'Password', 'PasswordConfirmation', 'Place', 'Select',
+                'Slug', 'Sparkline', 'Status', 'Stack', 'Text', 'Textarea', 'Timezone', 'Trix', 'VaporFile', 'VaporImage',
+            ]
+
+            if(novaFields.includes(className) && novaField == className) {
+                return `${novaField} as Nova${novaField}`
+            }
+
+            return novaField
+        }
 
     }
 
