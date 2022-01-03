@@ -11,41 +11,44 @@ use Laravel\Nova\Fields\ID;
 use Illuminate\Http\Request;
 use Laravel\Nova\Http\Requests\NovaRequest;
 <% if(this.crudHasTextInputs) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('Text') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('Text') $>;
 <% } %>
 <% if(this.crud.hasSelectInputs()) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('Select') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('Select') $>;
 <% } %>
 <% if(this.crud.hasImageInputs()) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('Image') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('Image') $>;
 <% } %>
 <% if(this.crud.hasFileInputs()) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('File') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('File') $>;
 <% } %>
 <% if(this.crud.hasNumericInputs()) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('Number') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('Number') $>;
 <% } %>
 <% if(this.crud.hasTextareaInputs()) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('Textarea') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('Textarea') $>;
 <% } %>
 <% if(this.crud.hasDateInputs()) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('Date') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('Date') $>;
 <% } %>
 <% if(this.crud.hasDatetimeInputs()) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('Datetime') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('Datetime') $>;
 <% } %>
 <% if(this.crud.hasPasswordInputs()) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('Password') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('Password') $>;
 <% } %>
 <% if(this.crud.hasHiddenInputs()) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('Hidden') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('Hidden') $>;
 <% } %>
 <% if(this.crud.hasCheckboxInputs()) { %>
-use Laravel\Nova\Fields\<$ this.fieldName('Boolean') $>;
+use Laravel\Nova\Fields\<$ this.fieldClassName('Boolean') $>;
 <% } %>
 <###>
-<% for(let relationship of this.crudModelRelationships) { %>
-    use Laravel\Nova\Fields\<$ relationship.type.case('pascalCase') $>;
+<% if(!this.isCrudForMasterDetail) { %>
+    <###>
+    <% for(let relationship of this.crudModelRelationships) { %>
+        use Laravel\Nova\Fields\<$ relationship.type.case('pascalCase') $>;
+    <% } %>
 <% } %>
 
 class <$ crudModelName $> extends Resource
@@ -73,6 +76,15 @@ class <$ crudModelName $> extends Resource
         '<$ this.crud.model.getLabelFieldName() $>',
     ];
 
+    <% if(this.isCrudForMasterDetail) { %>
+    /**
+     * Indicates if the resource should be displayed in the sidebar.
+     *
+     * @var bool
+     */
+    public static $displayInNavigation = false;
+    <% } %>
+
     /**
      * Get the fields displayed by the resource.
      *
@@ -84,7 +96,7 @@ class <$ crudModelName $> extends Resource
         return [
             ID::make('id')->sortable(),
 
-            <% if(this.crud.inputs.length && crudPluginData.inputs) { %>
+            <% if((this.crud.inputs.length && crudPluginData.inputs) || this.isCrudForMasterDetail) { %>
                 <# Crud inputs #>
                 <% for(let input of this.novaInputs) { %>
                     <###>
@@ -140,17 +152,20 @@ class <$ crudModelName $> extends Resource
                 <% } %>
             <% } %>
 
-            <% for(let relationship of this.crudModelRelationships) { %>
+            <% if(!this.isCrudForMasterDetail) { %>
                 <###>
-                <% if(crudPluginData.relationships[relationship.id]) { %>
-                    <% let relInput = relationship.inputs ? relationship.inputs[0] : null %>
+                <% for(let relationship of this.crudModelRelationships) { %>
                     <###>
-                    <$ relationship.type.case('pascalCase') $>::make('<$ this.getRelationshipModelName(relationship) $>')
-                    <###>
-                    <% if(relInput && relInput.field.nullable) { %>
-                        ->nullable()
-                    <% } %>,
+                    <% if(crudPluginData.relationships[relationship.id]) { %>
+                        <% let relInput = relationship.inputs ? relationship.inputs[0] : null %>
+                        <###>
+                        <$ relationship.type.case('pascalCase') $>::make('<$ this.getRelationshipModelName(relationship) $>')
+                        <###>
+                        <% if(relInput && relInput.field.nullable) { %>
+                            ->nullable()
+                        <% } %>,
 
+                    <% } %>
                 <% } %>
             <% } %>
         ];

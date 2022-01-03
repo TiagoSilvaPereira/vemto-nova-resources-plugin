@@ -49,14 +49,47 @@ module.exports = (vemto) => {
 
             selectedCruds = Object.keys(selectedCruds).filter(crud => selectedCruds[crud] && selectedCruds[crud].selected)
 
-            this.generateNovaFiles(selectedCruds)
+            let [crudsWithMasterDetailRelationships, masterDetailCruds] = this.resolveCrudRelationships(selectedCruds)
+
+            this.generateNovaFiles(crudsWithMasterDetailRelationships, masterDetailCruds)
+        },
+
+        resolveCrudRelationships(cruds) {
+            let pluginData = vemto.getPluginData(),
+                projectCruds = vemto.getProject().getMainCruds(),
+                masterDetailCruds = []
+
+            cruds.forEach(crudId => {
+                let crud = projectCruds.find(crud => crud.id == crudId),
+                    crudPluginData = pluginData.cruds[crudId]
+
+                if(!crud || !crudPluginData) return
+
+                let crudRelationships = this.getAllRelationshipsFromModel(crud.model)
+
+                crudRelationships.forEach(relationship => {
+                    let crudRelationship = relationship.model.cruds[0]
+
+                    if(!crudPluginData.relationships[relationship.id] || !crudRelationship) return
+
+                    if(pluginData.cruds[crudRelationship.id] && pluginData.cruds[crudRelationship.id].selected) return
+                    
+                    if(masterDetailCruds.includes(crudRelationship.id)) return
+                    
+                    masterDetailCruds.push(crudRelationship.id)
+                })
+            })
+
+            cruds = cruds.concat(masterDetailCruds)
+
+            return [cruds, masterDetailCruds]
         },
 
         crudsSelectedForNova() {
             let pluginData = vemto.getPluginData(),
-                hasCrudForGenerate = pluginData.cruds.find(crud => crud && crud.selected)
+                hasCrudForGeneration = pluginData.cruds.find(crud => crud && crud.selected)
 
-            if(!hasCrudForGenerate) {
+            if(!hasCrudForGeneration) {
                 vemto.log.warning('No have a selected CRUD for generate a Nova Resource.')
                 return []
             }
@@ -64,7 +97,7 @@ module.exports = (vemto) => {
             return pluginData.cruds
         },
 
-        generateNovaFiles(selectedCruds) {
+        generateNovaFiles(selectedCruds, masterDetailCruds) {
             let basePath = 'app/Nova',
                 options = {
                     formatAs: 'php',
@@ -82,23 +115,25 @@ module.exports = (vemto) => {
 
                 let novaInputs = this.getInputsForNova(crud),
                     crudHasTextInputs = this.crudHasTextInputs(crud),
-                    crudModelRelationships = this.getAllRelationshipsFromModel(crud.model)
+                    crudModelRelationships = this.getAllRelationshipsFromModel(crud.model),
+                    isCrudForMasterDetail = masterDetailCruds.includes(crudId)
 
                 options.data = {
                     crud, novaInputs,
                     crudHasTextInputs,
+                    isCrudForMasterDetail,
                     crudModelRelationships,
                     getTypeForNova: (input) => this.getTypeForNova(input, crud.model.name),
                     getValidationForNova: this.getValidationForNova,
                     getRelationshipModelName: this.getRelationshipModelName,
                     getUpdateValidationForNova: this.getUpdateValidationForNova,
-                    fieldName: (fieldName) => this.novaFieldNames(fieldName, crud.model.name),
-
-                    modules: [
-                        {name: 'crud', id: crud.id},
-                        {name: 'crud-settings', id: crud.id}
-                    ]
+                    fieldClassName: (fieldName) => this.getNovaFieldClassName(fieldName, crud.model.name),
                 }
+
+                options.modules = [
+                    { name: 'crud', id: crudId },
+                    { name: 'crud-settings', id: crudId }
+                ]
 
                 vemto.renderTemplate('files/NovaResource.vemtl', `${basePath}/${crud.model.name}.php`, options)
             })
@@ -173,7 +208,7 @@ module.exports = (vemto) => {
             vemto.openLink(`${projectSettings.url}/nova`)
         },
 
-        novaFieldNames(novaField, className) {
+        getNovaFieldClassName(novaField, className) {
             let novaFields = this.getNovaFieldNames()
 
             if(novaFields.includes(className) && novaField == className) {
@@ -193,5 +228,4 @@ module.exports = (vemto) => {
         }
 
     }
-
 }

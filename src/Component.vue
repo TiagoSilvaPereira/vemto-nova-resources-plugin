@@ -75,23 +75,20 @@ export default {
                 this.$set(crudData.relationships, index, crudData.selected)
             })
 
-            if(crudData.selected) {
-                this.vemtoProject.purgeRemovedModule('crud-settings', crud.id)
-            } else {
-                this.vemtoProject.registerRemovedModule('crud-settings', crud.id)
-            }
-
+            this.toggleCrudModule(crud.id, crudData.selected)
             this.save()
         },
 
         selectAllData(event) {
             let isChecked = event.target.checked
 
-            this.pluginData.cruds.forEach(crudData => {
+            this.pluginData.cruds.forEach((crudData, crudId) => {
                 if(!crudData) return
 
                 crudData.selected = isChecked
                 crudData.inputs = isChecked
+
+                this.toggleCrudModule(crudId, isChecked)
 
                 crudData.relationships.forEach((rel, index) => {
                     crudData.relationships[index] = isChecked
@@ -99,6 +96,15 @@ export default {
             })
 
             this.save()
+        },
+
+        toggleCrudModule(crudId, selected) {
+            if(selected) {
+                this.vemtoProject.purgeRemovedModule('crud-settings', crudId)
+                return
+            }
+
+            this.vemtoProject.registerRemovedModule('crud-settings', crudId)
         },
         
         checkNewProjectCruds() {
