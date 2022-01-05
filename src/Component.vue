@@ -29,7 +29,7 @@
                     <small class="mb-1 ml-3">Relationships</small>
                     <div class="form-check my-1 ml-3" v-for="relationship in getAllRelationshipsFromModel(crud.model)" :key="'rel' + relationship.id">
                         <label class="inline-flex items-center">
-                            <input class="form-checkbox" type="checkbox" v-model="pluginData.cruds[crud.id]['relationships'][relationship.id]" @change="save">
+                            <input class="form-checkbox" type="checkbox" v-model="pluginData.cruds[crud.id]['relationships'][relationship.id].selected" @change="save">
                             <span class="ml-2 text-gray-800 dark:text-gray-300">{{ `${relationship.type.case('pascalCase')} (${relationship.name.case('pascalCase')})` }}</span>
                         </label>
                     </div>
@@ -72,7 +72,9 @@ export default {
             this.$set(crudData, 'inputs', crudData.selected)
 
             crudData.relationships.forEach((rel, index) => {
-                this.$set(crudData.relationships, index, crudData.selected)
+                if(!rel) return
+
+                this.$set(crudData.relationships[index], 'selected', crudData.selected)
             })
 
             this.toggleCrudModule(crud.id, crudData.selected)
@@ -91,7 +93,9 @@ export default {
                 this.toggleCrudModule(crudId, isChecked)
 
                 crudData.relationships.forEach((rel, index) => {
-                    crudData.relationships[index] = isChecked
+                    if(!rel) return
+                    
+                    crudData.relationships[index].selected = isChecked
                 })
             })
 
@@ -116,7 +120,7 @@ export default {
 
                 if(crudRelationships.length) {
                     crudRelationships.forEach(rel => {
-                        crudData.relationships[rel.id] = false
+                        crudData.relationships[rel.id].selected = false
                     })
                 }
 

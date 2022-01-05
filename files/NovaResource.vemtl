@@ -1,6 +1,6 @@
 <?php
 <# TEMPLATE VARIABLES #>
-<% let crudPluginData = this.pluginData.cruds[this.crud.id] %>
+<% let crudPluginData = this.crud.pluginConfig %>
 <% let crudModelName = this.crud.model.name %>
 <% let modelsNamespace = this.projectHelper.getModelsNamespace() %>
 <####>
@@ -44,11 +44,8 @@ use Laravel\Nova\Fields\<$ this.fieldClassName('Hidden') $>;
 use Laravel\Nova\Fields\<$ this.fieldClassName('Boolean') $>;
 <% } %>
 <###>
-<% if(!this.isCrudForMasterDetail) { %>
-    <###>
-    <% for(let relationship of this.crudModelRelationships) { %>
-        use Laravel\Nova\Fields\<$ relationship.type.case('pascalCase') $>;
-    <% } %>
+<% for(let relationship of this.crudModelRelationships) { %>
+    use Laravel\Nova\Fields\<$ relationship.type.case('pascalCase') $>;
 <% } %>
 
 class <$ crudModelName $> extends Resource
@@ -76,7 +73,7 @@ class <$ crudModelName $> extends Resource
         '<$ this.crud.model.getLabelFieldName() $>',
     ];
 
-    <% if(this.isCrudForMasterDetail) { %>
+    <% if(crudPluginData.isMasterDetail) { %>
     /**
      * Indicates if the resource should be displayed in the sidebar.
      *
@@ -96,11 +93,11 @@ class <$ crudModelName $> extends Resource
         return [
             ID::make('id')->sortable(),
 
-            <% if((this.crud.inputs.length && crudPluginData.inputs) || this.isCrudForMasterDetail) { %>
+            <% if((this.crud.inputs.length && crudPluginData.inputs) || crudPluginData.isMasterDetail) { %>
                 <# Crud inputs #>
                 <% for(let input of this.novaInputs) { %>
                     <###>
-                    <$ this.getTypeForNova(input) $>::make('<$ input.name.case('pascalCase') $>')
+                    <$ this.getTypeForNova(input) $>::make('<$ input.name.case('capitalCase') $>')
                         <% if(input.hasValidation() || input.hasUpdateValidation()) { %>
                             <###>
                             <% if(!input.hasDifferentUpdateValidation()) { %>
@@ -152,20 +149,20 @@ class <$ crudModelName $> extends Resource
                 <% } %>
             <% } %>
 
-            <% if(!this.isCrudForMasterDetail) { %>
+            <###>
+            <% for(let relationship of this.crudModelRelationships) { %>
                 <###>
-                <% for(let relationship of this.crudModelRelationships) { %>
+                <% let relPluginData = crudPluginData && crudPluginData.relationships[relationship.id] %>
+                <###>
+                <% if((crudPluginData && crudPluginData.isMasterDetail) || (relPluginData && relPluginData.selected)) { %>
+                    <% let relInput = relationship.inputs ? relationship.inputs[0] : null %>
                     <###>
-                    <% if(crudPluginData.relationships[relationship.id]) { %>
-                        <% let relInput = relationship.inputs ? relationship.inputs[0] : null %>
-                        <###>
-                        <$ relationship.type.case('pascalCase') $>::make('<$ this.getRelationshipModelName(relationship) $>')
-                        <###>
-                        <% if(relInput && relInput.field.nullable) { %>
-                            ->nullable()
-                        <% } %>,
+                    <$ relationship.type.case('pascalCase') $>::make('<$ this.getRelationshipModelName(relationship) $>')
+                    <###>
+                    <% if(relInput && relInput.field.nullable) { %>
+                        ->nullable()
+                    <% } %>,
 
-                    <% } %>
                 <% } %>
             <% } %>
         ];

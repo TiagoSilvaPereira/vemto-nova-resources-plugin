@@ -1,6 +1,8 @@
 module.exports = (vemto) => {
 
     return {
+        crudRepository: [],
+        
         canInstall() {
             let appVersion = vemto.project.version,
                 compareOptions = {
@@ -17,22 +19,23 @@ module.exports = (vemto) => {
         },
 
         onInstall() {
+            let projectCruds = vemto.getProject().getMainCruds()
+
             vemto.savePluginData({
-                cruds: this.generateCrudsData()
+                cruds: this.generateCrudsData(projectCruds)
             })
         },
 
-        generateCrudsData() {
-            let projectCruds = vemto.getProject().getMainCruds(),
-                crudsData = []
+        generateCrudsData(cruds) {
+            let crudsData = []
 
-            projectCruds.forEach(crud => {
-                let crudData = { 'selected': true, 'inputs': true, 'relationships': [] },
+                cruds.forEach(crud => {
+                let crudData = { 'selected': true, 'id': crud.id, 'inputs': true, 'relationships': [] },
                     crudRelationships = this.getAllRelationshipsFromModel(crud.model)
 
                 if(crudRelationships.length) {
                     crudRelationships.forEach(rel => {
-                        crudData.relationships[rel.id] = true
+                        crudData.relationships[rel.id] = { 'selected': true }
                     })
                 }
 
@@ -47,42 +50,13 @@ module.exports = (vemto) => {
 
             if(!selectedCruds.length) return
 
-            selectedCruds = Object.keys(selectedCruds).filter(crud => selectedCruds[crud] && selectedCruds[crud].selected)
+            this.addSelectedCrudsToRepository(selectedCruds)
 
-            let [crudsWithMasterDetailRelationships, masterDetailCruds] = this.resolveCrudRelationships(selectedCruds)
-
-            this.generateNovaFiles(crudsWithMasterDetailRelationships, masterDetailCruds)
-        },
-
-        resolveCrudRelationships(cruds) {
-            let pluginData = vemto.getPluginData(),
-                projectCruds = vemto.getProject().getMainCruds(),
-                masterDetailCruds = []
-
-            cruds.forEach(crudId => {
-                let crud = projectCruds.find(crud => crud.id == crudId),
-                    crudPluginData = pluginData.cruds[crudId]
-
-                if(!crud || !crudPluginData) return
-
-                let crudRelationships = this.getAllRelationshipsFromModel(crud.model)
-
-                crudRelationships.forEach(relationship => {
-                    let crudRelationship = relationship.model.cruds[0]
-
-                    if(!crudPluginData.relationships[relationship.id] || !crudRelationship) return
-
-                    if(pluginData.cruds[crudRelationship.id] && pluginData.cruds[crudRelationship.id].selected) return
-                    
-                    if(masterDetailCruds.includes(crudRelationship.id)) return
-                    
-                    masterDetailCruds.push(crudRelationship.id)
-                })
+            this.crudRepository.forEach(crud => {
+                this.resolveCrudRelationships(crud)
             })
 
-            cruds = cruds.concat(masterDetailCruds)
-
-            return [cruds, masterDetailCruds]
+            this.generateNovaFiles()
         },
 
         crudsSelectedForNova() {
@@ -94,10 +68,64 @@ module.exports = (vemto) => {
                 return []
             }
 
-            return pluginData.cruds
+            return pluginData.cruds.filter(crud => crud && crud.selected)
         },
 
-        generateNovaFiles(selectedCruds, masterDetailCruds) {
+        addSelectedCrudsToRepository(cruds) {
+            let projectCruds = vemto.getProject().getMainCruds()
+
+            cruds.forEach(crud => {
+                let crudData = projectCruds.find(projectCrud => projectCrud.id === crud.id)
+
+                crudData = this.generatePluginConfigForCrud(crudData, crud.inputs, crud.relationships, false)
+
+                this.crudRepository.push(crudData)
+            })
+        },
+
+        resolveCrudRelationships(crud, ignorePluginConfig = false) {
+            let relationships = this.getAllRelationshipsFromModel(crud.model)
+
+            relationships.forEach(rel => {
+                let crudRelationshipData = crud.pluginConfig.relationships && crud.pluginConfig.relationships[rel.id]
+
+                if(!ignorePluginConfig && (!crudRelationshipData || !crudRelationshipData.selected)) return
+
+                let relModelCrud = rel.model.cruds[0],
+                    crudModelExistsOnRepository = this.crudRepository.find(crud => crud.model.id === rel.model.id)
+
+                if(crudModelExistsOnRepository) return
+
+                if(!relModelCrud) {
+                    relModelCrud = vemto.createFakeCrudFromModel(rel.model)
+                }
+
+                relModelCrud = this.generatePluginConfigForCrud(relModelCrud, true, {}, true)
+
+                this.crudRepository.push(relModelCrud)
+
+                this.resolveCrudRelationships(relModelCrud, true)
+            })
+        },
+
+        generatePluginConfigForCrud(crud, inputs, relationships, isMasterDetail = false) {
+            if(!crud.pluginConfig) {
+                crud.pluginConfig = {}
+            }
+
+            crud.pluginConfig.inputs = inputs
+            crud.pluginConfig.relationships = relationships
+
+            if(isMasterDetail) {
+                crud.pluginConfig.isMasterDetail = true
+            } else {
+                crud.pluginConfig.isSelectedCrud = true
+            }
+
+            return crud
+        },
+
+        generateNovaFiles() {
             let basePath = 'app/Nova',
                 options = {
                     formatAs: 'php',
@@ -106,22 +134,14 @@ module.exports = (vemto) => {
                 
             vemto.log.message('Generating Nova Resources...')
 
-            let projectCruds = vemto.getProject().getMainCruds()
-
-            selectedCruds.forEach(crudId => {
-                let crud = projectCruds.find(crud => crud.id == crudId)
-
-                if(!crud) return
-
+            this.crudRepository.forEach(crud => {
                 let novaInputs = this.getInputsForNova(crud),
                     crudHasTextInputs = this.crudHasTextInputs(crud),
-                    crudModelRelationships = this.getAllRelationshipsFromModel(crud.model),
-                    isCrudForMasterDetail = masterDetailCruds.includes(crudId)
+                    crudModelRelationships = this.getAllRelationshipsFromModel(crud.model)
 
                 options.data = {
                     crud, novaInputs,
                     crudHasTextInputs,
-                    isCrudForMasterDetail,
                     crudModelRelationships,
                     getTypeForNova: (input) => this.getTypeForNova(input, crud.model.name),
                     getValidationForNova: this.getValidationForNova,
@@ -131,8 +151,8 @@ module.exports = (vemto) => {
                 }
 
                 options.modules = [
-                    { name: 'crud', id: crudId },
-                    { name: 'crud-settings', id: crudId }
+                    { name: 'crud', id: crud.id },
+                    { name: 'crud-settings', id: crud.id }
                 ]
 
                 vemto.renderTemplate('files/NovaResource.vemtl', `${basePath}/${crud.model.name}.php`, options)
@@ -226,6 +246,5 @@ module.exports = (vemto) => {
                 'Slug', 'Sparkline', 'Status', 'Stack', 'Text', 'Textarea', 'Timezone', 'Trix', 'VaporFile', 'VaporImage',
             ]
         }
-
     }
 }
