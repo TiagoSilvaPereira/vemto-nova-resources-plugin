@@ -69,10 +69,14 @@ export default {
         toggleCrudData(crud) {
             let crudData = this.pluginData.cruds[crud.id]
 
+            if(!crudData || !crudData.relationships) return
+
             this.$set(crudData, 'inputs', crudData.selected)
 
             crudData.relationships.forEach((rel, index) => {
                 if(!rel) return
+
+                if(!crudData.relationships[index]) return
 
                 this.$set(crudData.relationships[index], 'selected', crudData.selected)
             })
@@ -120,6 +124,7 @@ export default {
 
                 if(crudRelationships.length) {
                     crudRelationships.forEach(rel => {
+                        crudData.relationships[rel.id] = {}
                         crudData.relationships[rel.id].selected = false
                     })
                 }
