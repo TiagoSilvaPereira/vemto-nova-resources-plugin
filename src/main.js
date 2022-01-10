@@ -77,6 +77,8 @@ module.exports = (vemto) => {
             cruds.forEach(crud => {
                 let crudData = projectCruds.find(projectCrud => projectCrud.id === crud.id)
 
+                if(!crudData) return
+
                 crudData = this.generatePluginConfigForCrud(crudData, crud.inputs, crud.relationships, false)
 
                 this.crudRepository.push(crudData)
