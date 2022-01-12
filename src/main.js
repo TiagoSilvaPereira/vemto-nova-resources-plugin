@@ -11,6 +11,7 @@ module.exports = (vemto) => {
             let projectCruds = vemto.getProject().getMainCruds()
 
             vemto.savePluginData({
+                allSelected: true,
                 cruds: this.generateCrudsData(projectCruds)
             })
         },
@@ -46,6 +47,8 @@ module.exports = (vemto) => {
             })
 
             this.generateNovaFiles()
+
+            this.alertForNotInstalledNova()
         },
 
         crudsSelectedForNova() {
@@ -196,7 +199,7 @@ module.exports = (vemto) => {
         },
 
         getInputsForNova(crud) {
-            return crud.inputs.filter(input => !input.isForRelationship())
+            return crud.inputs.filter(input => !input.isForRelationship() && input.isLinkedToField())
         },
 
         getAllRelationshipsFromModel(model) {
@@ -220,7 +223,9 @@ module.exports = (vemto) => {
 
         beforeRunnerEnd() {
             let projectSettings = vemto.getProject()
-        
+            
+            this.alertForNotInstalledNova()
+
             vemto.openLink(`${projectSettings.url}/nova`)
         },
 
@@ -241,6 +246,12 @@ module.exports = (vemto) => {
                 'Image', 'KeyValue', 'Markdown', 'Number', 'Password', 'PasswordConfirmation', 'Place', 'Select',
                 'Slug', 'Sparkline', 'Status', 'Stack', 'Text', 'Textarea', 'Timezone', 'Trix', 'VaporFile', 'VaporImage',
             ]
+        },
+
+        alertForNotInstalledNova() {
+            if(!vemto.projectFolderExists('nova')) {
+                vemto.log.warning(`Please install Laravel Nova on your project folder to use the Admin Panel`)
+            }
         }
     }
 }
