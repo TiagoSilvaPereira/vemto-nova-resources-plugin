@@ -6,7 +6,9 @@ This plugin aims to bring the generation of [Laravel Nova Resources](https://nov
 
 ## Requirements
 
-This plugin doesn't install [Laravel Nova](https://nova.laravel.com/), as it is a paid package. Before using it, please be sure to follow all [Laravel Nova installation steps](https://nova.laravel.com/docs/3.0/installation.html).
+This plugin doesn't install [Laravel Nova](https://nova.laravel.com/), as it is a paid package. Before using it, please be sure to follow all [Laravel Nova installation steps](https://nova.laravel.com/docs/3.0/installation.html) on your generated project.
+
+As you will need to install Laravel Nova, it is recommended to install this plugin on your project only after the first Code Generation (because before the code generation you don't have the project folder nor the composer.json file to install the Laravel Nova correctly).
 
 After installing [Laravel Nova](https://nova.laravel.com/), you can just select what resources you want to generate based on your project CRUD applications.
 
