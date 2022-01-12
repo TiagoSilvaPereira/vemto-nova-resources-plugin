@@ -6,5 +6,6 @@
     "description": "Laravel Nova Plugin",
     "image": "",
     "main": "src/main.js",
-    "vueComponent": "dist/nova-resources.umd.min.js"
+    "vueComponent": "dist/nova-resources.umd.min.js",
+    "minVemtoVersion": "1.0.4"
 }

@@ -4,17 +4,6 @@ module.exports = (vemto) => {
         crudRepository: [],
         
         canInstall() {
-            let appVersion = vemto.project.version,
-                compareOptions = {
-                    numeric: false,
-                    sensitivity: 'base'
-                }
-
-            if(appVersion.localeCompare("1.0.4", undefined, compareOptions) < 0) {
-                vemto.addBlockReason('You have a smaller version than recommended to use the plugin')
-                return false
-            }
-
             return true
         },
 
@@ -85,13 +74,17 @@ module.exports = (vemto) => {
             })
         },
 
-        resolveCrudRelationships(crud, ignorePluginConfig = false) {
+        resolveCrudRelationships(crud, crudIsFromPluginConfig = true) {
             let relationships = this.getAllRelationshipsFromModel(crud.model)
 
             relationships.forEach(rel => {
-                let crudRelationshipData = crud.pluginConfig.relationships && crud.pluginConfig.relationships[rel.id]
+                let crudRelationshipData = crud.pluginConfig.relationships 
+                    ? crud.pluginConfig.relationships[rel.id]
+                    : null
 
-                if(!ignorePluginConfig && (!crudRelationshipData || !crudRelationshipData.selected)) return
+                let relationshipIsNotSelected = !crudRelationshipData || !crudRelationshipData.selected
+
+                if(crudIsFromPluginConfig && relationshipIsNotSelected) return
 
                 let relModelCrud = rel.model.cruds[0],
                     crudModelExistsOnRepository = this.crudRepository.find(crud => crud.model.id === rel.model.id)
@@ -106,7 +99,7 @@ module.exports = (vemto) => {
 
                 this.crudRepository.push(relModelCrud)
 
-                this.resolveCrudRelationships(relModelCrud, true)
+                this.resolveCrudRelationships(relModelCrud, false)
             })
         },
 
@@ -142,13 +135,14 @@ module.exports = (vemto) => {
                     crudModelRelationships = this.getAllRelationshipsFromModel(crud.model)
 
                 options.data = {
-                    crud, novaInputs,
+                    crud, 
+                    novaInputs,
                     crudHasTextInputs,
                     crudModelRelationships,
-                    getTypeForNova: (input) => this.getTypeForNova(input, crud.model.name),
                     getValidationForNova: this.getValidationForNova,
                     getRelationshipModelName: this.getRelationshipModelName,
                     getUpdateValidationForNova: this.getUpdateValidationForNova,
+                    getTypeForNova: (input) => this.getTypeForNova(input, crud.model.name),
                     fieldClassName: (fieldName) => this.getNovaFieldClassName(fieldName, crud.model.name),
                 }
 
