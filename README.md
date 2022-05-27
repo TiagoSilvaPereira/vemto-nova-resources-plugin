@@ -1,12 +1,16 @@
 # Laravel Nova Resources
 
-> This is a [Vemto](https://vemto.app) plugin. Vemto is a GUI [Laravel](https://laravel.com) generator with a complete set of tools for starting new [Laravel](https://laravel.com) projects. 
+> This is a [Vemto](https://vemto.app) plugin. Vemto is a GUI [Laravel](https://laravel.com) generator with a complete set of tools for starting new [Laravel](https://laravel.com) projects.
 
 This plugin aims to bring the generation of [Laravel Nova Resources](https://nova.laravel.com/docs/3.0/resources/) to your Vemto Laravel project.
 
 ## Requirements
 
-This plugin doesn't install [Laravel Nova](https://nova.laravel.com/), as it is a paid package. Before using it, please be sure to follow all [Laravel Nova installation steps](https://nova.laravel.com/docs/3.0/installation.html) on your generated project.
+This plugin doesn't install [Laravel Nova](https://nova.laravel.com/), as it is a paid package. Before using it, please be sure to follow all Laravel Nova installation on your generated project:
+
+> [Laravel Nova 3.0 - Installation Steps](https://nova.laravel.com/docs/3.0/installation.html)
+
+> [Laravel Nova 4.0 - Installation Steps](https://nova.laravel.com/docs/4.0/installation.html)
 
 After installing [Laravel Nova](https://nova.laravel.com/), you can just select what resources you want to generate based on your project CRUD applications.
 

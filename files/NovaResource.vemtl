@@ -157,7 +157,7 @@ class <$ crudModelName $> extends Resource
                 <% if((crudPluginData && crudPluginData.isMasterDetail) || (relPluginData && relPluginData.selected)) { %>
                     <% let relInput = relationship.inputs ? relationship.inputs[0] : null %>
                     <###>
-                    <$ relationship.type.case('pascalCase') $>::make('<$ this.getRelationshipModelName(relationship) $>')
+                    <$ relationship.type.case('pascalCase') $>::make('<$ this.getRelationshipModelName(relationship) $>', '<$ relationship.name $>')
                     <###>
                     <% if(relInput && relInput.field.nullable) { %>
                         ->nullable()
