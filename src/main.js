@@ -249,7 +249,7 @@ module.exports = (vemto) => {
         },
 
         alertForNotInstalledNova() {
-            if(!vemto.projectFolderExists('nova')) {
+            if(!vemto.projectFolderExists('config/nova.php')) {
                 vemto.log.warning(`Please install Laravel Nova on your project folder to use the Admin Panel`)
             }
         }
