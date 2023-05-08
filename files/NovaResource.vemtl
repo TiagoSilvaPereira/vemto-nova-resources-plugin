@@ -96,8 +96,14 @@ class <$ crudModelName $> extends Resource
             <% if((this.crud.inputs.length && crudPluginData.inputs) || crudPluginData.isMasterDetail) { %>
                 <# Crud inputs #>
                 <% for(let input of this.novaInputs) { %>
+                    <% let inputNameCapitalCase = input.name.case('capitalCase') %>
+                    <% let hasNonStandardLabel = input.label && input.label.length && input.label != inputNameCapitalCase %>
                     <###>
-                    <$ this.getTypeForNova(input) $>::make('<$ input.name.case('capitalCase') $>')
+                    <% if(hasNonStandardLabel) { %>
+                    <$ this.getTypeForNova(input) $>::make('<$ input.label $>', '<$ inputNameCapitalCase.toLowerCase() $>')
+                    <% } else { %>
+                    <$ this.getTypeForNova(input) $>::make('<$ inputNameCapitalCase $>')
+                    <% } %>
                         <% if(input.hasValidation() || input.hasUpdateValidation()) { %>
                             <###>
                             <% if(!input.hasDifferentUpdateValidation()) { %>
